@@ -1,3 +1,66 @@
+// 音效系统 - Web Audio API 合成音效
+const Sound = {
+  _ctx: null,
+  _enabled: true,
+  _init() {
+    if (!this._ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) this._ctx = new AC();
+    }
+    if (this._ctx && this._ctx.state === 'suspended') {
+      this._ctx.resume();
+    }
+  },
+  toggle() {
+    this._enabled = !this._enabled;
+    return this._enabled;
+  },
+  play(type) {
+    if (!this._enabled) return;
+    try {
+      this._init();
+      if (!this._ctx) return;
+      switch (type) {
+        case 'playCard': this._beep(800, 0.08); break;
+        case 'yourTurn': this._beep(660, 0.12, 2, 0.1); break;
+        case 'gameStart': this._sweep(400, 900, 0.35); break;
+        case 'win': this._sweep(500, 1200, 0.5); break;
+        case 'lose': this._sweep(800, 200, 0.5); break;
+        case 'teammate': this._beep(780, 0.15, 3, 0.08); break;
+        case 'pass': this._beep(350, 0.06); break;
+        case 'callCard': this._beep(520, 0.18); break;
+        case 'finish': this._sweep(600, 1000, 0.3); break;
+      }
+    } catch (e) { /* 静默失败 */ }
+  },
+  _beep(freq, dur, count, gap) {
+    count = count || 1; gap = gap || dur;
+    for (let i = 0; i < count; i++) {
+      const t = this._ctx.currentTime + i * (dur + gap);
+      const osc = this._ctx.createOscillator();
+      const gain = this._ctx.createGain();
+      osc.connect(gain); gain.connect(this._ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.13, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t); osc.stop(t + dur + 0.02);
+    }
+  },
+  _sweep(f0, f1, dur) {
+    const t = this._ctx.currentTime;
+    const osc = this._ctx.createOscillator();
+    const gain = this._ctx.createGain();
+    osc.connect(gain); gain.connect(this._ctx.destination);
+    osc.frequency.setValueAtTime(f0, t);
+    osc.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.start(); osc.stop(t + dur + 0.03);
+  }
+};
+
 // UI 工具函数
 const UI = {
   _toastTimer: null,

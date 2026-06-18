@@ -102,16 +102,46 @@ const GameUI = {
     }
 
     // 如果队友已揭示，显示提示
-    if (gameState.teammateRevealed) {
-      // 检查自己是否是队友
-      const me = this.players[this.myIndex];
-      if (me && me.isTeammate) {
-        // 在某个地方显示自己是队友
-      }
+   if (gameState.teammateRevealed) {
+     // 检查自己是否是队友
+     const me = this.players[this.myIndex];
+     if (me && me.isTeammate) {
+       // 在某个地方显示自己是队友
+     }
+   }
+
+    // 显示叫的牌
+    this.renderCalledCard(gameState);
+  },
+
+  // 显示庄家叫的牌（一直可见）
+  renderCalledCard(gameState) {
+    const bar = document.getElementById("called-card-bar");
+    const display = document.getElementById("called-card-display");
+    if (!bar || !display) return;
+
+    const calledCard = gameState.calledCard;
+    if (calledCard && gameState.phase === "playing") {
+      const suit = calledCard[0];
+      const rank = calledCard.slice(1);
+      const f = UI.formatCard({ suit, rank });
+      display.innerHTML = "";
+      const cardEl = UI.renderCardElement({ suit, rank }, true);
+      cardEl.style.cssText = "width:28px;height:36px;font-size:0.75rem;margin-right:4px;";
+      display.appendChild(cardEl);
+      const labelSpan = document.createElement("span");
+      labelSpan.textContent = f.symbol + rank;
+      display.appendChild(labelSpan);
+      bar.classList.remove("hidden");
+    } else if (calledCard && gameState.phase === "finished") {
+      display.textContent = calledCard;
+      bar.classList.remove("hidden");
+    } else {
+      bar.classList.add("hidden");
     }
   },
 
-  // 渲染出牌区
+ // 渲染出牌区
   renderPlayArea(lastPlay) {
     const area = document.getElementById("play-cards");
     area.innerHTML = "";
@@ -287,8 +317,8 @@ const GameUI = {
     setTimeout(() => overlay.classList.add("hidden"), 3000);
   },
 
-  // 显示结果
-  showResult(result) {
+ // 显示结果
+ showResult(result) {
     const overlay = document.getElementById("result-overlay");
     const title = document.getElementById("result-title");
     const details = document.getElementById("result-details");
@@ -345,6 +375,8 @@ const GameUI = {
       scoreDiv.textContent = `😢 失败: ${myTeamScore}分`;
       title.textContent = "失败";
     }
+    // play result sound
+    if (myTeamScore > 0) { Sound.play("win"); } else { Sound.play("lose"); }
     details.appendChild(scoreDiv);
     
     overlay.classList.remove("hidden");

@@ -154,3 +154,61 @@ input::placeholder { color: rgba(255,255,255,0.3); }
 .pass-indicator { color: rgba(255,255,255,0.4); font-size: 0.8rem; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px; }
 @media (max-width: 360px) { .hand-card { width: 38px; height: 56px; font-size: 0.8rem; } .play-card { width: 34px; height: 46px; font-size: 0.7rem; } .game-title h1 { font-size: 2.8rem; } }
 @media (min-width: 600px) { .game-table { max-width: 600px; margin: 0 auto; } .hand-area { max-width: 600px; margin: 0 auto; } .action-bar { max-width: 600px; margin: 0 auto; } }
+
+/* called card bar */
+.called-card-bar {
+  display: flex; align-items: center; justify-content: center;
+  padding: 4px 12px; background: rgba(255,215,0,0.12);
+  border-bottom: 1px solid rgba(255,215,0,0.2);
+  gap: 6px; position: relative; min-height: 32px;
+}
+.called-card-bar.hidden { display: none; }
+.called-card-label {
+  color: rgba(255,255,255,0.6); font-size: 0.8rem;
+}
+.called-card-display {
+  color: #ffd700; font-weight: bold; font-size: 1rem;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.called-card-display .play-card {
+  width: 28px; height: 36px; font-size: 0.75rem;
+}
+.sound-toggle {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  font-size: 1rem; padding: 2px 6px; cursor: pointer; background: none; border: none;
+  color: rgba(255,255,255,0.6); line-height: 1;
+}
+.sound-toggle:hover { color: rgba(255,255,255,0.9); }
+
+/* landscape overlay */
+.landscape-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: #0f0c29; display: none;
+  align-items: center; justify-content: center;
+  z-index: 999;
+}
+.landscape-overlay.active { display: flex; }
+.landscape-hint { text-align: center; }
+.landscape-icon { font-size: 4rem; color: #ffd700; animation: rotate-hint 2s ease-in-out infinite; margin-bottom: 16px; }
+@keyframes rotate-hint {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(90deg); }
+}
+.landscape-hint p { color: rgba(255,255,255,0.8); font-size: 1.2rem; margin-bottom: 8px; }
+.landscape-sub { color: rgba(255,255,255,0.4); font-size: 0.85rem; }
+
+/* landscape game layout */
+@media (orientation: landscape) {
+  .game-table { max-width: 100%; }
+  .hand-area { max-height: 110px; overflow-y: hidden; }
+  .hand-cards { gap: 1px; }
+  .hand-card { width: 38px; height: 54px; font-size: 0.8rem; }
+  .player-seat.top { padding: 3px 0; }
+  .player-seat.bottom { padding: 2px 0; }
+  .table-middle .player-seat.left, .table-middle .player-seat.right { width: 60px; }
+  .play-area { min-height: 60px; }
+  .play-card { width: 34px; height: 44px; font-size: 0.7rem; }
+}
+@media (orientation: portrait) and (max-width: 768px) {
+  .landscape-overlay { display: flex; }
+}

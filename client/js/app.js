@@ -135,6 +135,13 @@ function showHint() {
   } else if (lastType === "pair") {
     const rankCounts = {};
     GameUI.myHand.forEach(c => { rankCounts[c.rank] = (rankCounts[c.rank] || 0) + 1; });
+
+// 横屏检测
+checkOrientation();
+window.addEventListener("resize", checkOrientation);
+window.addEventListener("orientationchange", function() {
+  setTimeout(checkOrientation, 300);
+});
     const bigPairs = Object.entries(rankCounts)
       .filter(([r, c]) => c >= 2 && (order[r] || 0) > lastValue)
       .sort((a, b) => (order[a[0]] || 0) - (order[b[0]] || 0));
@@ -299,6 +306,28 @@ function updateRoomButtons(players, allReady) {
 }
 
 // ===== 加载完成 =====
+
+// 音效开关
+function toggleSound() {
+  const enabled = Sound.toggle();
+  const btn = document.getElementById("sound-toggle");
+  if (btn) btn.textContent = enabled ? "🔊" : "🔇";
+  UI.showToast(enabled ? "音效已开启" : "音效已关闭");
+}
+
+// 横屏检测
+function checkOrientation() {
+  const overlay = document.getElementById("landscape-overlay");
+  if (!overlay) return;
+  const isPhone = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (!isPhone) { overlay.classList.remove("active"); return; }
+  if (window.innerWidth > window.innerHeight) {
+    overlay.classList.remove("active");
+  } else {
+    overlay.classList.add("active");
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initSocket();
   UI.showPage("lobby-page");

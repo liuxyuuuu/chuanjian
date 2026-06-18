@@ -65,6 +65,12 @@
   <!-- ===== 游戏页面 ===== -->
   <div id="game-page" class="page">
     <div class="game-container">
+      <!-- called card banner -->
+      <div id="called-card-bar" class="called-card-bar hidden">
+        <span class="called-card-label">叫牌 · </span>
+        <span id="called-card-display" class="called-card-display"></span>
+        <button id="sound-toggle" class="btn sound-toggle" onclick="toggleSound()">🔊</button>
+      </div>
       <!-- 顶部信息栏 -->
       <div class="game-top-bar">
         <button class="btn small ghost" onclick="confirmLeave()">退出</button>
@@ -172,6 +178,14 @@
   </div>
 
   <!-- ===== 队友揭晓通知 ===== -->
+  <div id="landscape-overlay" class="landscape-overlay hidden">
+    <div class="landscape-hint">
+      <div class="landscape-icon">↻</div>
+      <p>请将手机横屏</p>
+      <p class="landscape-sub">横向显示效果更佳</p>
+    </div>
+  </div>
+
   <div id="teammate-overlay" class="overlay hidden">
     <div class="overlay-content teammate-content">
       <h3>🔍 队友揭晓</h3>

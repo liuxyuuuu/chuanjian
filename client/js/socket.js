@@ -24,67 +24,74 @@ function initSocket() {
     updateRoomButtons(data.players, data.allReady);
   });
 
-  // 游戏开始
-  socket.on("game_start", (data) => {
-    UI.showPage("game-page");
-    UI.showToast("游戏开始！");
-  });
+ // 游戏开始
+ socket.on("game_start", (data) => {
+   UI.showPage("game-page");
+   UI.showToast("游戏开始！");
+    Sound.play("gameStart");
+ });
 
-  // 轮到叫牌
-  socket.on("your_turn_call", (data) => {
-    GameUI.showCallOverlay(data.myHand);
-  });
+ // 轮到叫牌
+ socket.on("your_turn_call", (data) => {
+   GameUI.showCallOverlay(data.myHand);
+ });
 
-  // 叫牌结果
-  socket.on("card_called", (data) => {
-    GameUI.calledCardId = data.calledCard;
-    GameUI.hideCallOverlay();
-    UI.showToast("庄家叫了 " + data.calledCard);
-  });
+ // 叫牌结果
+ socket.on("card_called", (data) => {
+   GameUI.calledCardId = data.calledCard;
+   GameUI.hideCallOverlay();
+   UI.showToast("庄家叫了 " + data.calledCard);
+    Sound.play("callCard");
+ });
 
-  // 队友信息（只发给庄家）
-  socket.on("teammate_info", (data) => {
-    UI.showToast("你的队友是：" + data.teammateNickname);
-  });
+ // 队友信息（只发给庄家）
+ socket.on("teammate_info", (data) => {
+   UI.showToast("你的队友是：" + data.teammateNickname);
+    Sound.play("teammate");
+ });
 
-  // 游戏状态更新
-  socket.on("game_state", (data) => {
-    GameUI.isMyTurn = (data.currentTurn === data.myIndex) && data.phase === "playing";
-    GameUI.renderTable(data);
-  });
+ // 游戏状态更新
+ socket.on("game_state", (data) => {
+   GameUI.isMyTurn = (data.currentTurn === data.myIndex) && data.phase === "playing";
+   GameUI.renderTable(data);
+ });
 
-  // 轮到出牌
-  socket.on("your_turn", (data) => {
-    GameUI.isMyTurn = true;
-    GameUI.updateActionButtons();
-    UI.showToast("轮到你出牌");
-  });
+ // 轮到出牌
+ socket.on("your_turn", (data) => {
+   GameUI.isMyTurn = true;
+   GameUI.updateActionButtons();
+   UI.showToast("轮到你出牌");
+    Sound.play("yourTurn");
+ });
 
-  // 出牌广播
-  socket.on("cards_played", (data) => {
-    GameUI.clearSelection();
-  });
+ // 出牌广播
+ socket.on("cards_played", (data) => {
+   GameUI.clearSelection();
+    Sound.play("playCard");
+ });
 
-  // 过牌广播
-  socket.on("player_passed", (data) => {
-    const player = GameUI.players[data.playerIndex];
-    const name = player ? player.nickname : "玩家";
-    if (data.roundReset) {
+ // 过牌广播
+ socket.on("player_passed", (data) => {
+    Sound.play("pass");
+   const player = GameUI.players[data.playerIndex];
+   const name = player ? player.nickname : "玩家";
+   if (data.roundReset) {
       UI.showToast(name + " 过牌，新回合开始");
     } else {
       UI.showToast(name + " 过牌");
     }
   });
 
-  // 队友揭晓
-  socket.on("teammate_revealed", (data) => {
-    GameUI.showTeammateReveal(data);
-  });
+ // 队友揭晓
+ socket.on("teammate_revealed", (data) => {
+   GameUI.showTeammateReveal(data);
+    Sound.play("teammate");
+ });
 
-  // 游戏结束
-  socket.on("game_over", (data) => {
-    GameUI.showResult(data.result);
-  });
+ // 游戏结束
+ socket.on("game_over", (data) => {
+   GameUI.showResult(data.result);
+ });
 
   // 玩家断开
   socket.on("player_disconnected", (data) => {
