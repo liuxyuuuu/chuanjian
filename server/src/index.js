@@ -2,7 +2,9 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const { botCallCard, botPlayCards } = require('./game/botAi');
 const RoomManager = require('./room/roomManager');
+const { PHASE } = require('./game/gameManager');
 
 const app = express();
 const server = http.createServer(app);
@@ -46,6 +48,28 @@ io.on('connection', (socket) => {
     console.log(`[房间] ${nickname} 创建了房间 ${result.roomCode}`);
     
     if (callback) callback({ success: true, ...result });
+  });
+
+  // 添加机器人
+  socket.on('add_bot', (data, callback) => {
+    const roomCode = roomManager.getRoomCode(socket.id);
+    if (!roomCode) { if (callback) callback({ success: false }); return; }
+    const result = roomManager.addBot(roomCode);
+    if (result.success) {
+      broadcastRoomUpdate(roomCode);
+    }
+    if (callback) callback(result);
+  });
+
+  // 移除机器人
+  socket.on('remove_bot', (data, callback) => {
+    const roomCode = roomManager.getRoomCode(socket.id);
+    if (!roomCode) { if (callback) callback({ success: false }); return; }
+    const result = roomManager.removeBot(roomCode);
+    if (result.success) {
+      broadcastRoomUpdate(roomCode);
+    }
+    if (callback) callback(result);
   });
 
   // 加入房间
@@ -128,21 +152,25 @@ io.on('connection', (socket) => {
         calledCard: result.calledCard,
         declarerIndex: room.game.declarerIndex,
       });
-      
+
       io.to(socket.id).emit('teammate_info', {
         teammateIndex: result.teammateIndex,
         teammateNickname: result.teammateNickname,
       });
-      
+
       room.players.forEach((p, i) => {
         io.to(p.socketId).emit('game_state', room.game.getGameState(i));
       });
-      
+
+      scheduleBotTurn(roomCode);
+
       const currentPlayer = room.players[result.currentTurn];
       io.to(currentPlayer.socketId).emit('your_turn', {
         lastPlay: null,
         isNewRound: true,
       });
+
+      scheduleBotTurn(roomCode);
     }
     
     if (callback) callback(result);
@@ -179,6 +207,8 @@ io.on('connection', (socket) => {
         });
       }
       
+      scheduleBotTurn(roomCode);
+
       if (result.gameOver) {
         io.to(roomCode).emit('game_over', {
           result: result.result,
@@ -242,6 +272,7 @@ io.on('connection', (socket) => {
           isNewRound: false,
         });
       }
+      scheduleBotTurn(roomCode);
     }
     
     if (callback) callback(result);

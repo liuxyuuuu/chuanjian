@@ -50,7 +50,7 @@ const GameUI = {
       const countEl = seatEl.querySelector(".player-card-count");
       const badgeEl = seatEl.querySelector(".player-badge");
       
-      if (nameEl) nameEl.textContent = p.nickname;
+      if (nameEl) nameEl.textContent = (p.isBot ? "🤖 " : "") + p.nickname;
       if (countEl) {
         if (p.finished) {
           countEl.textContent = `✓ 第${p.finishPosition}名`;

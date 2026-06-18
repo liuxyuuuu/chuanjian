@@ -89,8 +89,10 @@ class RoomManager {
       return null;
     }
     
-    // 移除玩家
+    // 移除玩家或机器人
     room.players = room.players.filter(p => p.socketId !== socketId);
+    // 更新索引
+    room.players.forEach((p, i) => p.index = i);
     this.socketRooms.delete(socketId);
     
     // 如果房间空了，删除房间
@@ -158,6 +160,7 @@ class RoomManager {
     const startResult = game.start(room.players.map(p => ({
       socketId: p.socketId,
       nickname: p.nickname,
+      isBot: p.isBot || false,
     })));
     
     room.game = game;
@@ -197,6 +200,39 @@ class RoomManager {
     return room.players.map(p => p.socketId);
   }
 
+  // 添加机器人
+  addBot(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (!room || room.isPlaying) return { success: false, reason: "游戏进行中" };
+    if (room.players.length >= 4) return { success: false, reason: "房间已满" };
+    const botCount = room.players.filter(p => p.isBot).length;
+    const nicknames = ["电脑甲", "电脑乙", "电脑丙", "电脑丁"];
+    const playerIndex = room.players.length;
+    room.players.push({
+      socketId: `bot_${roomCode}_${botCount}`,
+      nickname: nicknames[botCount],
+      ready: true,
+      index: playerIndex,
+      isHost: false,
+      isBot: true,
+    });
+    return { success: true, players: room.players.map(p => this._sanitizePlayer(p)) };
+  }
+
+  // 移除最后一个机器人
+  removeBot(roomCode) {
+    const room = this.rooms.get(roomCode);
+    if (!room || room.isPlaying) return { success: false, reason: "游戏进行中" };
+    let botIdx = -1;
+    for (let i = room.players.length - 1; i >= 0; i--) {
+      if (room.players[i].isBot) { botIdx = i; break; }
+    }
+    if (botIdx === -1) return { success: false, reason: "没有机器人" };
+    room.players.splice(botIdx, 1);
+    room.players.forEach((p, i) => p.index = i);
+    return { success: true, players: room.players.map(p => this._sanitizePlayer(p)) };
+  }
+
   // 清理玩家名中的敏感信息
   _sanitizePlayer(player) {
     return {
@@ -204,6 +240,7 @@ class RoomManager {
       nickname: player.nickname,
       ready: player.ready,
       isHost: player.isHost,
+      isBot: player.isBot || false,
     };
   }
 

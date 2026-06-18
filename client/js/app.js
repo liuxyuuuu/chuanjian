@@ -71,6 +71,16 @@ function toggleReady() {
   emitToggleReady();
 }
 
+async function addBot() {
+  const res = await emitAddBot();
+  if (!res.success) UI.showToast(res.reason || "添加电脑失败");
+}
+
+async function removeBot() {
+  const res = await emitRemoveBot();
+  if (!res.success) UI.showToast(res.reason || "移除电脑失败");
+}
+
 async function startGame() {
   const res = await emitStartGame();
   if (!res.success) {
@@ -232,7 +242,7 @@ function renderPlayerList(players) {
     badgeSpan.className = "badge";
     
     if (player) {
-      avatar.textContent = player.nickname[0];
+      avatar.textContent = player.isBot ? "\uD83E\uDD16" : player.nickname[0];
       nameSpan.textContent = player.nickname;
       
       if (player.isHost) {
@@ -276,7 +286,9 @@ function updateRoomButtons(players, allReady) {
   }
 
   readyBtn.classList.remove("hidden");
-  if (myPlayer.ready) {
+  if (myPlayer.isBot) {
+    readyBtn.classList.add("hidden");
+  } else if (myPlayer.ready) {
     readyBtn.textContent = "取消准备";
     readyBtn.className = "btn outline";
   } else {
@@ -300,12 +312,30 @@ function updateRoomButtons(players, allReady) {
       startBtn.disabled = true;
       startBtn.className = "btn secondary";
     }
+    // Bot controls
+    showBotControls(players);
   } else {
     startBtn.classList.add("hidden");
+    showBotControls(players);
   }
 }
 
 // ===== 加载完成 =====
+
+// 显示/隐藏机器人控制按钮
+function showBotControls(players) {
+  const container = document.getElementById("bot-controls");
+  if (!container) return;
+  const myPlayer = myPlayerIndex >= 0 ? players.find(p => p.index === myPlayerIndex) : players.find(p => p.nickname === myNickname);
+  if (!myPlayer || !myPlayer.isHost) { container.classList.add("hidden"); return; }
+  const hasEmptySlot = players.length < 4;
+  const hasBot = players.some(p => p.isBot);
+  const addBtn = document.getElementById("add-bot-btn");
+  const removeBtn = document.getElementById("remove-bot-btn");
+  if (addBtn) addBtn.style.display = hasEmptySlot ? "" : "none";
+  if (removeBtn) removeBtn.style.display = hasBot ? "" : "none";
+  container.classList.remove("hidden");
+}
 
 // 音效开关
 function toggleSound() {

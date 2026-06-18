@@ -151,6 +151,18 @@ function emitLeaveRoom() {
   socket.emit("leave_room");
 }
 
+function emitAddBot() {
+  return new Promise((resolve) => {
+    socket.emit("add_bot", {}, (res) => resolve(res));
+  });
+}
+
+function emitRemoveBot() {
+  return new Promise((resolve) => {
+    socket.emit("remove_bot", {}, (res) => resolve(res));
+  });
+}
+
 function emitGetGameState() {
   return new Promise((resolve) => {
     socket.emit("get_game_state", {}, (res) => resolve(res));

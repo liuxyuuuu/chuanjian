@@ -212,3 +212,9 @@ input::placeholder { color: rgba(255,255,255,0.3); }
 @media (orientation: portrait) and (max-width: 768px) {
   .landscape-overlay { display: flex; }
 }
+
+/* bot controls */
+.bot-controls { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+.bot-controls.hidden { display: none; }
+.bot-controls .btn { padding: 6px 14px; font-size: 0.8rem; }
+.player-item .avatar.bot { background: linear-gradient(135deg, #ff6b35, #f7c948); font-size: 1rem; }
