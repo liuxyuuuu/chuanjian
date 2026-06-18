@@ -1,4 +1,4 @@
-﻿// 游戏界面渲染
+// 游戏界面渲染
 const GameUI = {
   myIndex: -1,
   players: [],

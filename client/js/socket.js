@@ -1,4 +1,4 @@
-﻿// Socket.IO 客户端连接
+// Socket.IO 客户端连接
 let socket = null;
 
 function initSocket() {

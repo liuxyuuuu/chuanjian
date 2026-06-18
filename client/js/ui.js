@@ -1,4 +1,4 @@
-﻿// UI 工具函数
+// UI 工具函数
 const UI = {
   _toastTimer: null,
 

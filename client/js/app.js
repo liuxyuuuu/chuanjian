@@ -1,4 +1,4 @@
-﻿// ===== 应用入口 =====
+// ===== 应用入口 =====
 let myNickname = "";
 let myPlayerIndex = -1;
 
