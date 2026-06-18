@@ -218,3 +218,13 @@ input::placeholder { color: rgba(255,255,255,0.3); }
 .bot-controls.hidden { display: none; }
 .bot-controls .btn { padding: 6px 14px; font-size: 0.8rem; }
 .player-item .avatar.bot { background: linear-gradient(135deg, #ff6b35, #f7c948); font-size: 1rem; }
+
+/* per-player last played cards */
+.player-seat .played-cards { display: flex; gap: 1px; justify-content: center; min-height: 28px; align-items: center; flex-wrap: wrap; padding: 0 4px; }
+.player-seat .played-cards .play-card { box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+.player-seat.top .played-cards { order: -1; margin-bottom: 2px; }
+.player-seat.bottom .played-cards { margin-top: 2px; }
+.player-seat.left .played-cards { flex-direction: column; margin-top: 4px; }
+.player-seat.right .played-cards { flex-direction: column; margin-top: 4px; }
+.table-middle .player-seat.left { width: 70px; }
+.table-middle .player-seat.right { width: 70px; }

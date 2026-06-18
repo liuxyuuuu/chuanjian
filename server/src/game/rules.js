@@ -9,6 +9,8 @@ const HAND_TYPE = {
   SWORD_44A: 'sword_44a',     // 44A（剑）
   SMALL_THUNDER: 'small_thunder', // 666（小雷）
   BIG_THUNDER: 'big_thunder',   // QQQ（大雷）
+  THREE_ONE: 'three_one',     // 三带一
+  THREE_TWO: 'three_two',     // 三带二
   BOMB: 'bomb',               // 炸弹（>=4张）
   INVALID: 'invalid'           // 无效牌型
 };
@@ -22,6 +24,8 @@ const HAND_POWER = {
   [HAND_TYPE.SWORD_44A]: 10,
   [HAND_TYPE.SMALL_THUNDER]: 11,
   [HAND_TYPE.BIG_THUNDER]: 12,
+  [HAND_TYPE.THREE_ONE]: 4,
+  [HAND_TYPE.THREE_TWO]: 5,
   [HAND_TYPE.BOMB]: 13,
 };
 
@@ -77,6 +81,27 @@ function analyzeHand(cards) {
     }
   }
   
+
+
+  // 三带一 (3+1=4张)
+  if (n === 4) {
+    const entries = Object.entries(valueCount).map(([v, c]) => [parseInt(v), c]);
+    const three = entries.find(([v, c]) => c === 3);
+    const one = entries.find(([v, c]) => c === 1);
+    if (three && one) {
+      return { type: HAND_TYPE.THREE_ONE, mainValue: three[0], length: 4 };
+    }
+  }
+
+  // 三带二 (3+2=5张)
+  if (n === 5) {
+    const entries = Object.entries(valueCount).map(([v, c]) => [parseInt(v), c]);
+    const three = entries.find(([v, c]) => c === 3);
+    const two = entries.find(([v, c]) => c === 2);
+    if (three && two) {
+      return { type: HAND_TYPE.THREE_TWO, mainValue: three[0], length: 5 };
+    }
+  }
   // 连对：>=4张，偶数，点数两两相同，连续
   if (n >= 4 && n % 2 === 0) {
     const pairs = n / 2;

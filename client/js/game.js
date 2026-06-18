@@ -42,10 +42,13 @@ const GameUI = {
     this.players.forEach((p, i) => {
       const seat = this.getSeatForPlayerIndex(i);
       if (!seat) return;
-      
+
       const seatEl = document.getElementById(`player-${seat}`);
       if (!seatEl) return;
-      
+
+      // 渲染该玩家上一轮的牌
+      this.renderPlayerLastPlay(i, seat);
+
       const nameEl = seatEl.querySelector(".player-name");
       const countEl = seatEl.querySelector(".player-card-count");
       const badgeEl = seatEl.querySelector(".player-badge");
@@ -112,6 +115,28 @@ const GameUI = {
 
     // 显示叫的牌
     this.renderCalledCard(gameState);
+  },
+
+  // 显示庄家叫的牌（一直可见）
+  // 渲染指定座位的上一轮出牌
+  renderPlayerLastPlay(playerIndex, seat) {
+    const container = document.getElementById(`played-${seat}`);
+    if (!container) return;
+    container.innerHTML = "";
+
+    const lastPlays = this.gameState?.lastPlays;
+    if (!lastPlays) return;
+
+    const lp = lastPlays[playerIndex];
+    if (!lp || !lp.cards || lp.cards.length === 0) return;
+
+    lp.cards.forEach(cardId => {
+      const suit = cardId[0];
+      const rank = cardId.slice(1);
+      const el = UI.renderCardElement({ suit, rank });
+      el.style.cssText = "width:22px;height:32px;font-size:0.6rem;margin:0 1px;";
+      container.appendChild(el);
+    });
   },
 
   // 显示庄家叫的牌（一直可见）

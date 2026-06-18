@@ -24,6 +24,7 @@ class GameManager {
     this.lastPlay = null;
     this.passCount = 0;
     this.lastActiveIndex = -1;
+    this.lastPlays = [null, null, null, null];
     this.finishOrder = [];
     this.seats = [];
   }
@@ -75,6 +76,7 @@ class GameManager {
     if (calledCardPlayed && !this.teammateRevealed) { this.teammateRevealed = true; teammateJustRevealed = true; }
     player.hand = removeCards(player.hand, cards);
     this.lastPlay = { playerIndex, cards: cards.map(c => c.id), handAnalysis };
+    this.lastPlays[playerIndex] = { cards: cards.map(c => c.id), handAnalysis };
     this.lastActiveIndex = playerIndex;
     this.passCount = 0;
     let justFinished = false;
@@ -159,6 +161,7 @@ class GameManager {
       lastPlay: this.lastPlay ? { playerIndex: this.lastPlay.playerIndex, cards: this.lastPlay.cards, handAnalysis: this.lastPlay.handAnalysis } : null,
       passCount: this.passCount,
       teammateRevealed: this.teammateRevealed,
+      lastPlays: this.lastPlays.map(lp => lp ? { cards: lp.cards, handAnalysis: lp.handAnalysis } : null),
       calledCard: this.calledCardId,
       finishOrder: this.finishOrder.length > 0 ? [...this.finishOrder] : null,
       myHand: forPlayerIndex >= 0 ? this.players[forPlayerIndex].hand : [],
