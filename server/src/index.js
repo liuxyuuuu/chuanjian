@@ -22,7 +22,7 @@ function broadcastRoomUpdate(roomCode) {
   const room = roomManager.getRoom(roomCode);
   if (!room) return;
   const sanitized = room.players.map(p => ({
-    index: p.index, nickname: p.nickname, ready: p.ready, isHost: p.isHost
+    index: p.index, nickname: p.nickname, ready: p.ready, isHost: p.isHost, isBot: p.isBot || false
   }));
   room.players.forEach(p => {
     io.to(p.socketId).emit('room_update', {
@@ -292,7 +292,7 @@ io.on('connection', (socket) => {
     if (room.game) {
       if (callback) callback({ success: true, gameState: room.game.getGameState(player.index) });
     } else {
-      if (callback) callback({ success: true, gameState: null, roomInfo: { players: room.players.map(p => ({ index: p.index, nickname: p.nickname, ready: p.ready, isHost: p.isHost })) } });
+      if (callback) callback({ success: true, gameState: null, roomInfo: { players: room.players.map(p => ({ index: p.index, nickname: p.nickname, ready: p.ready, isHost: p.isHost, isBot: p.isBot || false })) } });
     }
   });
 
@@ -324,6 +324,84 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+
+// ===== 机器人回合自动执行 =====
+function scheduleBotTurn(roomCode) {
+  const room = roomManager.getRoom(roomCode);
+  if (!room || !room.game) return;
+  if (room.game.phase === PHASE.FINISHED || room.game.phase === PHASE.WAITING) return;
+
+  // CALL phase: check if declarer is a bot
+  if (room.game.phase === PHASE.CALL) {
+    const declarer = room.players[room.game.declarerIndex];
+    if (!declarer || !declarer.isBot) return;
+  } else {
+    // PLAYING phase: check current turn player
+    const cp = room.players[room.game.currentTurnIndex];
+    if (!cp || !cp.isBot) return;
+  }
+
+  setTimeout(() => {
+    const cr = roomManager.getRoom(roomCode);
+    if (!cr || !cr.game) return;
+    if (cr.game.phase === PHASE.FINISHED) return;
+
+    if (cr.game.phase === PHASE.CALL) {
+      const declarer = cr.players[cr.game.declarerIndex];
+      if (!declarer || !declarer.isBot) return;
+      // Bot declarer calls a card
+      const hand = cr.game.getPlayerHand(cr.game.declarerIndex);
+      const cardId = botCallCard(hand);
+      const res = cr.game.callCard(cr.game.declarerIndex, cardId);
+      if (res.success) {
+        io.to(roomCode).emit("card_called", { calledCard: res.calledCard, declarerIndex: cr.game.declarerIndex });
+        cr.players.forEach((p, i) => {
+          if (!p.isBot) io.to(p.socketId).emit("game_state", cr.game.getGameState(i));
+        });
+        const np = cr.players[res.currentTurn];
+        if (np && !np.isBot) io.to(np.socketId).emit("your_turn", { lastPlay: null, isNewRound: true });
+        scheduleBotTurn(roomCode);
+      }
+    } else if (cr.game.phase === PHASE.PLAYING) {
+      const bp = cr.players[cr.game.currentTurnIndex];
+      if (!bp || !bp.isBot) return;
+      const hand = cr.game.getPlayerHand(cr.game.currentTurnIndex);
+      const dec = botPlayCards(hand, cr.game.lastPlay);
+
+      if (dec.action === "play") {
+        const res = cr.game.playCards(cr.game.currentTurnIndex, dec.cardIds);
+        if (res.success) {
+          io.to(roomCode).emit("cards_played", { playerIndex: res.playerIndex, cards: res.cards, handAnalysis: res.handAnalysis, justFinished: res.justFinished, finishPosition: res.finishPosition });
+          if (res.teammateJustRevealed) io.to(roomCode).emit("teammate_revealed", { teammateIndex: res.teammateIndex, teammateNickname: res.teammateNickname, calledCardId: cr.game.calledCardId });
+          if (res.gameOver) {
+            io.to(roomCode).emit("game_over", { result: res.result });
+            cr.isPlaying = false; cr.game = null;
+            cr.players.forEach(p => p.ready = false);
+            return;
+          }
+          cr.players.forEach((p, i) => {
+            if (!p.isBot) io.to(p.socketId).emit("game_state", cr.game.getGameState(i));
+          });
+          const np = cr.players[res.currentTurn];
+          if (np && !np.isBot) io.to(np.socketId).emit("your_turn", { lastPlay: cr.game.lastPlay, isNewRound: false });
+          scheduleBotTurn(roomCode);
+        }
+      } else {
+        const res = cr.game.pass(cr.game.currentTurnIndex);
+        if (res.success) {
+          io.to(roomCode).emit("player_passed", { playerIndex: res.playerIndex, roundReset: res.roundReset });
+          cr.players.forEach((p, i) => {
+            if (!p.isBot) io.to(p.socketId).emit("game_state", cr.game.getGameState(i));
+          });
+          const np = cr.players[res.currentTurn];
+          if (np && !np.isBot) io.to(np.socketId).emit("your_turn", { lastPlay: cr.game.lastPlay, isNewRound: res.roundReset });
+          scheduleBotTurn(roomCode);
+        }
+      }
+    }
+  }, 1000);
+}
 
 // 启动服务器
 const PORT = process.env.PORT || 3000;
