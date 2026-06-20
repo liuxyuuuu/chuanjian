@@ -129,6 +129,32 @@ io.on('connection', (socket) => {
       room.players.forEach((p, i) => {
         io.to(p.socketId).emit('game_state', game.getGameState(i));
       });
+
+      // 如果是电脑庄家，自动叫牌
+      const declarer = room.players[result.gameInfo.declarerIndex];
+      if (declarer && declarer.isBot) {
+        setTimeout(() => {
+          const cr = roomManager.getRoom(roomCode);
+          if (!cr || !cr.game || cr.game.phase !== 'call') return;
+          const hand = game.getPlayerHand(result.gameInfo.declarerIndex);
+          const cardId = botCallCard(hand);
+          const callRes = game.callCard(result.gameInfo.declarerIndex, cardId);
+          if (callRes.success) {
+            io.to(roomCode).emit('card_called', {
+              calledCard: callRes.calledCard,
+              declarerIndex: game.declarerIndex
+            });
+            cr.players.forEach(p => {
+              if (!p.isBot) io.to(p.socketId).emit('game_state', game.getGameState(p.index));
+            });
+            const np = cr.players[callRes.currentTurn];
+            if (np && !np.isBot) io.to(np.socketId).emit('your_turn', { lastPlay: null, isNewRound: true });
+            scheduleBotTurn(roomCode);
+          }
+        }, 1500);
+      } else {
+        scheduleBotTurn(roomCode);
+      }
     }
     
     if (callback) callback(result);
@@ -161,8 +187,6 @@ io.on('connection', (socket) => {
       room.players.forEach((p, i) => {
         io.to(p.socketId).emit('game_state', room.game.getGameState(i));
       });
-
-      scheduleBotTurn(roomCode);
 
       const currentPlayer = room.players[result.currentTurn];
       io.to(currentPlayer.socketId).emit('your_turn', {
