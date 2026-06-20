@@ -49,8 +49,9 @@ function initSocket() {
  });
 
  // 游戏状态更新
- socket.on("game_state", (data) => {
-   GameUI.isMyTurn = (data.currentTurn === data.myIndex) && data.phase === "playing";
+socket.on("game_state", (data) => {
+  if (!data) return;
+  GameUI.isMyTurn = (data.currentTurn === data.myIndex) && data.phase === "playing";
    GameUI.renderTable(data);
  });
 
