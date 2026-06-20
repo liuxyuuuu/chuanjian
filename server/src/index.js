@@ -242,8 +242,12 @@ io.on('connection', (socket) => {
       });
 
       scheduleBotTurn(roomCode);
+
+      // 将 gameState 注入 ACK 回调（绕过 broadcast 丢失问题）
+      const gs = room.game.getGameState(player.index);
+      result.myGameState = gs;
     }
-    
+
     if (callback) callback(result);
   });
 

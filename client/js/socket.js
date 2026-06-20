@@ -125,6 +125,16 @@ function emitCallCard(cardId) {
   socket.emit("call_card", { cardId }, (res) => {
     if (!res.success) {
       UI.showToast(res.reason || "叫牌失败");
+    } else {
+      // 使用 ACK 回调中的 gameState 设置出牌界面（绕过广播丢失）
+      if (res.myGameState) {
+        GameUI.renderTable(res.myGameState);
+        GameUI.isMyTurn = true;
+        GameUI.updateActionButtons();
+        GameUI.startCountdown(20);
+        UI.showToast("轮到你出牌");
+        Sound.play("yourTurn");
+      }
     }
   });
 }
