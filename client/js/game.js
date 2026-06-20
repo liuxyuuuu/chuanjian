@@ -432,8 +432,8 @@ const GameUI = {
     this._countdownSec = seconds;
     const timerEl = document.getElementById("game-timer");
     if (!timerEl) return;
-    timerEl.textContent = this._countdownSec;
-    timerEl.className = "game-timer-center" + (this._countdownSec <= 5 ? " urgent" : "");
+    timerEl.textContent = seconds;
+    timerEl.className = "game-timer-center";
     this._countdownTimer = setInterval(() => {
       this._countdownSec--;
       if (this._countdownSec <= 0) {

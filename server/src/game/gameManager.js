@@ -162,7 +162,7 @@ class GameManager {
       gameId: this.id,
       phase: this.phase,
       players: this.players.map((p, i) => ({
-        index: i, nickname: p.nickname, cardCount: p.hand.length, finished: p.finished, finishPosition: p.finishPosition,
+        index: i, nickname: p.nickname, avatar: p.avatar || "", cardCount: p.hand.length, finished: p.finished, finishPosition: p.finishPosition,
         isDeclarer: i === this.declarerIndex, isTeammate: this.teammateRevealed && i === this.teammateIndex,
         isBot: p.isBot || false
       })),
