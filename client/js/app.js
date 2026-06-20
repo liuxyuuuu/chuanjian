@@ -98,7 +98,6 @@ function playSelected() {
     return;
   }
   const selectedIds = Array.from(GameUI.selectedCards);
-  // 乐观更新：立即从手牌移除
   const removedCards = GameUI.myHand.filter(c => selectedIds.includes(c.id));
   GameUI.myHand = GameUI.myHand.filter(c => !selectedIds.includes(c.id));
   GameUI.renderHand();

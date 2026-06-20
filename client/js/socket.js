@@ -5,11 +5,9 @@ function initSocket() {
   socket = io();
 
   socket.on("connect", () => {
-    console.log("已连接:", socket.id);
   });
 
   socket.on("disconnect", () => {
-    console.log("已断开连接");
     if (document.getElementById("game-page").classList.contains("active")) {
       UI.showToast("连接已断开");
     }
@@ -133,9 +131,8 @@ function emitCallCard(cardId) {
 function emitPlayCards(cardIds, removedCards) {
   socket.emit("play_cards", { cardIds }, (res) => {
     if (!res.success) {
-      // 出牌失败，把牌放回手牌
       if (removedCards && removedCards.length > 0) {
-        GameUI.myHand = [...GameUI.myHand, ...removedCards];
+            GameUI.myHand = [...GameUI.myHand, ...removedCards];
         GameUI.renderHand();
       }
       UI.showToast(res.reason || "出牌失败");

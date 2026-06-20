@@ -205,6 +205,7 @@ const GameUI = {
   // 渲染手牌
   renderHand() {
     const container = document.getElementById("hand-cards");
+    if (!container) { console.log("[renderHand] CONTAINER NOT FOUND!"); return; }
     container.innerHTML = "";
     
     if (!this.myHand || this.myHand.length === 0) {

@@ -74,7 +74,7 @@ class GameManager {
     let teammateJustRevealed = false;
     const calledCardPlayed = cards.some(c => c.id === this.calledCardId);
     if (calledCardPlayed && !this.teammateRevealed) { this.teammateRevealed = true; teammateJustRevealed = true; }
-    player.hand = removeCards(player.hand, cards);
+    player.hand = removeCards(player.hand, cardIds);
     this.lastPlay = { playerIndex, cards: cards.map(c => c.id), handAnalysis };
     this.lastPlays[playerIndex] = { cards: cards.map(c => c.id), handAnalysis };
     this.lastActiveIndex = playerIndex;
