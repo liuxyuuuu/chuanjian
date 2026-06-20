@@ -478,6 +478,11 @@ function scheduleBotTurn(roomCode) {
 }
 
 // 启动服务器
+process.on("uncaughtException", (err) => {
+  console.log("[崩溃]", err.message);
+  console.log(err.stack);
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`[启动] 穿剑服务器已启动，端口: ${PORT}`);
