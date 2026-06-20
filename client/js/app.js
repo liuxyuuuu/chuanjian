@@ -97,9 +97,13 @@ function playSelected() {
     UI.showToast("请选择要出的牌");
     return;
   }
-  
   const selectedIds = Array.from(GameUI.selectedCards);
-  emitPlayCards(selectedIds);
+  // 乐观更新：立即从手牌移除
+  const removedCards = GameUI.myHand.filter(c => selectedIds.includes(c.id));
+  GameUI.myHand = GameUI.myHand.filter(c => !selectedIds.includes(c.id));
+  GameUI.renderHand();
+  // 发送到服务器，携带 removedCards 用于失败恢复
+  emitPlayCards(selectedIds, removedCards);
 }
 
 function passTurn() {

@@ -130,9 +130,14 @@ function emitCallCard(cardId) {
   });
 }
 
-function emitPlayCards(cardIds) {
+function emitPlayCards(cardIds, removedCards) {
   socket.emit("play_cards", { cardIds }, (res) => {
     if (!res.success) {
+      // 出牌失败，把牌放回手牌
+      if (removedCards && removedCards.length > 0) {
+        GameUI.myHand = [...GameUI.myHand, ...removedCards];
+        GameUI.renderHand();
+      }
       UI.showToast(res.reason || "出牌失败");
       GameUI.clearSelection();
     }
