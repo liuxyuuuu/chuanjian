@@ -1,5 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
-const { dealCards, sortCards, removeCards, cardDisplay, RANK_ORDER } = require('./deck');
+const { dealCards, devDealCards, sortCards, removeCards, cardDisplay, RANK_ORDER } = require('./deck');
 const { analyzeHand, canBeat, HAND_TYPE } = require('./rules');
 
 const PHASE = {

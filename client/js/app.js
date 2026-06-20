@@ -352,6 +352,21 @@ function toggleRules() {
   const overlay = document.getElementById("rules-overlay");
   overlay.classList.toggle("hidden");
 }
+function startDevMode() {
+  const nick = getNickname();
+  saveNickname(nick);
+  myNickname = nick;
+  if (!socket || !socket.connected) { UI.showToast("正在连接服务器..."); return; }
+  UI.showToast("进入开发者模式...");
+  socket.emit("dev_mode", { nickname: nick, avatar: window._myAvatar || "" }, (res) => {
+    if (res && res.success) {
+      myPlayerIndex = 0;
+    } else {
+      UI.showToast((res && res.reason) || "进入开发者模式失败");
+    }
+  });
+}
+
 function closeRules() {
   document.getElementById("rules-overlay").classList.add("hidden");
 }

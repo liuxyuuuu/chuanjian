@@ -81,12 +81,31 @@ function cardDisplay(card) {
   return `${SUIT_NAMES[card.suit]}${card.rank}`;
 }
 
+function devDealCards() {
+  const deck = createDeck();
+  // Dev player gets: 4x3 (bomb), 3x6 (small_thunder), 3xQ (big_thunder), 2x4+1xA (sword)
+  const four3s = deck.filter(c => c.rank === "3").slice(0, 4);
+  const three6s = deck.filter(c => c.rank === "6").slice(0, 3);
+  const threeQs = deck.filter(c => c.rank === "Q").slice(0, 3);
+  const two4s = deck.filter(c => c.rank === "4").slice(0, 2);
+  const oneA = deck.filter(c => c.rank === "A").slice(0, 1);
+  const player0Cards = [...four3s, ...three6s, ...threeQs, ...two4s, ...oneA];
+  const usedIds = new Set(player0Cards.map(c => c.id));
+  const remaining = deck.filter(c => !usedIds.has(c.id));
+  return [
+    sortCards(player0Cards),
+    sortCards(remaining.slice(0, 13)),
+    sortCards(remaining.slice(13, 26)),
+    sortCards(remaining.slice(26, 39)),
+  ];
+}
+
 function cardsDisplay(cards) {
   return cards.map(cardDisplay).join(' ');
 }
 
 module.exports = {
   SUITS, SUIT_NAMES, SUIT_ORDER, RANK_ORDER, STRAIGHT_VALUES,
-  createCard, createDeck, shuffle, dealCards, sortCards,
+  createCard, createDeck, shuffle, dealCards, devDealCards, sortCards,
   findCardIndex, removeCards, cardDisplay, cardsDisplay
 };

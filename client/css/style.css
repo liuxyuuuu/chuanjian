@@ -335,3 +335,31 @@ input::placeholder { color: rgba(255,255,255,0.3); }
 .bomb-particle:nth-child(12) { --px: -50px; --py: -130px; }
 
 @keyframes fade-pop { 0% { transform: scale(0.3); opacity: 0; } 30% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+
+/* dev mode button */
+.dev-mode-btn {
+  position: fixed; bottom: 12px; right: 12px;
+  padding: 6px 12px; font-size: 0.75rem;
+  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.35);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+  cursor: pointer; z-index: 50;
+  transition: all 0.2s;
+}
+.dev-mode-btn:hover {
+  background: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.7);
+}
+
+/* dev mode button */
+.dev-mode-btn {
+  position: fixed; bottom: 12px; right: 12px;
+  padding: 6px 12px; font-size: 0.75rem;
+  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.35);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+  cursor: pointer; z-index: 50;
+  transition: all 0.2s;
+}
+.dev-mode-btn:hover {
+  background: rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.7);
+}

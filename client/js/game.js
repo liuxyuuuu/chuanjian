@@ -56,9 +56,9 @@ const GameUI = {
       const badgeEl = seatEl.querySelector(".player-badge");
       
       if (nameEl) {
-        const avatar = p.avatar || (p.isBot ? "🤖" : p.nickname[0]);
-        const score = (this.gameState?.cumulativeScores || [0,0,0,0])[i] || 0;
-        nameEl.textContent = avatar + " " + p.nickname + (p.isBot ? "" : " [" + score + "分]");
+        const avatar = p.isBot ? "\uD83E\uDD16" : (p.avatar || p.nickname[0]);
+        const sc = (this.gameState?.cumulativeScores || [0,0,0,0])[i] || 0;
+        nameEl.textContent = avatar + " " + p.nickname + " [" + (sc > 0 ? "+" : "") + sc + "]";
       }
       if (countEl) {
         if (p.finished) {

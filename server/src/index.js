@@ -51,6 +51,54 @@ io.on('connection', (socket) => {
     if (callback) callback({ success: true, ...result });
   });
 
+  // 开发者模式
+  socket.on('dev_mode', (data, callback) => {
+    const nickname = (data && data.nickname) || "开发者";
+    currentNickname = nickname;
+    const avatar = (data && data.avatar) || "";
+    const result = roomManager.createRoom(socket.id, nickname, avatar);
+    if (!result || !result.roomCode) {
+      if (callback) callback({ success: false, reason: "创建房间失败" });
+      return;
+    }
+    socket.join(result.roomCode);
+    const roomCode = result.roomCode;
+    // 添加3个机器人
+    roomManager.addBot(roomCode);
+    roomManager.addBot(roomCode);
+    roomManager.addBot(roomCode);
+    // 启动开发者模式游戏
+    const room = roomManager.getRoom(roomCode);
+    if (!room) { if (callback) callback({ success: false, reason: "房间不存在" }); return; }
+    const game = new (require("./game/gameManager").GameManager)(roomCode);
+    const startResult = game.startDevMode(room.players.map(p => ({
+      socketId: p.socketId,
+      nickname: p.nickname,
+      avatar: p.avatar || "",
+      isBot: p.isBot || false,
+    })));
+    room.game = game;
+    room.isPlaying = true;
+    // 广播游戏开始
+    broadcastRoomUpdate(roomCode);
+    io.to(roomCode).emit("game_start", {
+      phase: "call",
+      declarerIndex: startResult.declarerIndex,
+      declarerNickname: startResult.declarerNickname,
+      playerCount: 4,
+    });
+    room.players.forEach((p, i) => {
+      io.to(p.socketId).emit("game_state", Object.assign(game.getGameState(i), { cumulativeScores: room.scores || [0,0,0,0] }));
+    });
+    // 处理叫牌（H4在玩家手中）
+    const declarer = room.players[0];
+    io.to(declarer.socketId).emit("your_turn_call", {
+      myHand: game.getPlayerHand(0),
+      canCallAny: true,
+    });
+    if (callback) callback({ success: true, roomCode });
+  });
+
   // 添加机器人
   socket.on('add_bot', (data, callback) => {
     const roomCode = roomManager.getRoomCode(socket.id);

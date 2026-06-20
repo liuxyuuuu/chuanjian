@@ -246,6 +246,7 @@ class RoomManager {
       socketId: `bot_${roomCode}_${botCount}`,
       nickname: nicknames[botCount],
       ready: true,
+      avatar: "\uD83E\uDD16",
       index: playerIndex,
       isHost: false,
       isBot: true,
