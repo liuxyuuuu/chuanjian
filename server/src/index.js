@@ -229,10 +229,7 @@ io.on('connection', (socket) => {
         declarerIndex: room.game.declarerIndex,
       });
 
-      io.to(socket.id).emit('teammate_info', {
-        teammateIndex: result.teammateIndex,
-        teammateNickname: result.teammateNickname,
-      });
+      // 不发送 teammate_info，队友在出叫牌时才暴露
 
       room.players.forEach((p, i) => {
         io.to(p.socketId).emit('game_state', Object.assign(game.getGameState(i), { cumulativeScores: room.scores || [0,0,0,0] }));
