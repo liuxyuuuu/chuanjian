@@ -413,7 +413,12 @@ const GameUI = {
     if (myTeamScore > 0) { Sound.play("win"); } else { Sound.play("lose"); }
     details.appendChild(scoreDiv);
     
-    overlay.classList.remove("hidden");
+    overlay.classList.remove('hidden');
+    // 5秒后自动重开
+    if (window._restartTimer) clearTimeout(window._restartTimer);
+    window._restartTimer = setTimeout(() => {
+      emitRestartGame();
+    }, 5000);
   },
 
   // 开始倒计时

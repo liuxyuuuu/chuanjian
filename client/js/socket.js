@@ -163,6 +163,10 @@ function emitRemoveBot() {
   });
 }
 
+function emitRestartGame() {
+  socket.emit("restart_game");
+}
+
 function emitGetGameState() {
   return new Promise((resolve) => {
     socket.emit("get_game_state", {}, (res) => resolve(res));

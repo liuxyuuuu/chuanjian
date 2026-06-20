@@ -115,6 +115,10 @@ class GameManager {
       this.lastPlay = null;
       this.passCount = 0;
       this.currentTurnIndex = this.lastActiveIndex;
+      // 如果最后出牌的人已经出完，跳到下一个没出完的
+      if (this.players[this.currentTurnIndex].finished) {
+        this.advanceTurn();
+      }
       return { success: true, playerIndex, passed: true, roundReset: true, currentTurn: this.currentTurnIndex };
     }
     this.advanceTurn();

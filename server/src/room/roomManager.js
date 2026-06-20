@@ -173,6 +173,26 @@ class RoomManager {
     };
   }
 
+  // 重新开始游戏（不检查准备状态）
+  restartGame(socketId) {
+    const roomCode = this.socketRooms.get(socketId);
+    if (!roomCode) return { success: false, reason: '不在房间中' };
+    const room = this.rooms.get(roomCode);
+    if (!room) return { success: false, reason: '房间不存在' };
+    room.isPlaying = false;
+    room.game = null;
+    const GameManager = require('../game/gameManager').GameManager;
+    const game = new GameManager(roomCode);
+    const startResult = game.start(room.players.map(p => ({
+      socketId: p.socketId,
+      nickname: p.nickname,
+      isBot: p.isBot || false,
+    })));
+    room.game = game;
+    room.isPlaying = true;
+    return { success: true, gameInfo: startResult, roomCode };
+  }
+
   // 获取房间信息
   getRoom(roomCode) {
     return this.rooms.get(roomCode) || null;
