@@ -13,6 +13,7 @@
       <div class="game-title">
         <h1>穿剑</h1>
         <p class="subtitle">四人棋牌 · 谁是队友</p>
+      <button class="btn rules-btn small ghost" onclick="toggleRules()">📖 规则</button>
       </div>
       
       <div class="lobby-panel">
@@ -195,6 +196,26 @@
     <div class="overlay-content teammate-content">
       <h3>🔍 队友揭晓</h3>
       <p id="teammate-text"></p>
+    </div>
+  </div>
+
+  <!-- ===== 规则弹窗 ===== -->
+  <div id="rules-overlay" class="overlay hidden">
+    <div class="overlay-content rules-content">
+      <h3>📖 游戏规则</h3>
+      <div class="rules-body">
+        <p><strong>穿剑</strong> —— 四人棋牌游戏，红桃4叫牌找队友。</p>
+        <ul>
+          <li><b>发牌：</b>52张牌，4人各13张</li>
+          <li><b>牌大小：</b>3 &gt; 2 &gt; A &gt; K &gt; Q &gt; J &gt; 10 &gt; 9 &gt; 8 &gt; 7 &gt; 6 &gt; 5 &gt; 4</li>
+          <li><b>叫牌：</b>红桃4持有者叫一张自己没有的牌，持牌人为秘密队友</li>
+          <li><b>出牌类型：</b>单张、对子、连对（≥2对）、顺子（≥3张，到A）、三带一、三带二</li>
+          <li><b>特殊牌型：</b>44A（剑）&lt; 666（小雷）&lt; QQQ（大雷）&lt; 炸弹（≥4张同点）</li>
+          <li><b>胜负：</b>队友揭晓于叫牌打出时，按名次计分</li>
+          <li><b>积分：</b>排名1+2各+2分，1+3各+1分，1+4各0分（平局）</li>
+        </ul>
+      </div>
+      <button class="btn primary" onclick="closeRules()">知道了</button>
     </div>
   </div>
 

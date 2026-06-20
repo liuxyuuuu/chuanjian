@@ -29,6 +29,7 @@ const Sound = {
         case 'teammate': this._beep(780, 0.15, 3, 0.08); break;
         case 'pass': this._beep(350, 0.06); break;
         case 'callCard': this._beep(520, 0.18); break;
+        case 'bomb': this._sweep(200, 1500, 0.6); break;
         case 'finish': this._sweep(600, 1000, 0.3); break;
       }
     } catch (e) { /* 静默失败 */ }

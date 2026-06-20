@@ -400,7 +400,7 @@ function scheduleBotTurn(roomCode) {
         }
       }
     }
-  }, 1000);
+  }, 2000);
 }
 
 // 启动服务器

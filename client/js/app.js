@@ -337,6 +337,15 @@ function showBotControls(players) {
   container.classList.remove("hidden");
 }
 
+// 规则弹窗
+function toggleRules() {
+  const overlay = document.getElementById("rules-overlay");
+  overlay.classList.toggle("hidden");
+}
+function closeRules() {
+  document.getElementById("rules-overlay").classList.add("hidden");
+}
+
 // 音效开关
 function toggleSound() {
   const enabled = Sound.toggle();

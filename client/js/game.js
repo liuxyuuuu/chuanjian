@@ -9,6 +9,8 @@ const GameUI = {
   gameState: null,
   calledCardId: null,
   lastPlayCards: [],
+  _countdownTimer: null,
+  _countdownSec: 0,
 
   // 初始化座位映射：以自己为底
   initSeats(myIdx, seatIndices) {
@@ -91,7 +93,14 @@ const GameUI = {
     
     // 更新动作按钮
     this.updateActionButtons();
-    
+
+    // 倒计时管理
+    if (this.isMyTurn && gameState.phase === "playing") {
+      this.startCountdown(20);
+    } else {
+      this.stopCountdown();
+    }
+
     // 更新游戏状态
     const statusEl = document.getElementById("game-status-text");
     if (statusEl) {
@@ -407,12 +416,60 @@ const GameUI = {
     overlay.classList.remove("hidden");
   },
 
+  // 开始倒计时
+  startCountdown(seconds) {
+    this.stopCountdown();
+    this._countdownSec = seconds;
+    const timerEl = document.getElementById("game-timer");
+    if (!timerEl) return;
+    timerEl.textContent = this._countdownSec + "s";
+    timerEl.style.color = this._countdownSec <= 5 ? "#ff4444" : "rgba(255,255,255,0.8)";
+    this._countdownTimer = setInterval(() => {
+      this._countdownSec--;
+      if (this._countdownSec <= 0) {
+        this.stopCountdown();
+        timerEl.textContent = "超时！";
+        timerEl.style.color = "#ff4444";
+        return;
+      }
+      timerEl.textContent = this._countdownSec + "s";
+      timerEl.style.color = this._countdownSec <= 5 ? "#ff4444" : "rgba(255,255,255,0.8)";
+    }, 1000);
+  },
+
+  // 停止倒计时
+  stopCountdown() {
+    if (this._countdownTimer) {
+      clearInterval(this._countdownTimer);
+      this._countdownTimer = null;
+    }
+    const timerEl = document.getElementById("game-timer");
+    if (timerEl) timerEl.textContent = "";
+  },
+
+  // 特殊牌型特效
+  showEffect(type) {
+    const names = {
+      sword_44a: "\u2694\uFE0F \u5251\uFF0144A\uFF01",
+      small_thunder: "\u26A1 \u5C0F\u96F7\uFF01666\uFF01",
+      big_thunder: "\u26A1 \u5927\u96F7\uFF01QQQ\uFF01",
+      bomb: "\uD83D\uDCA5 \u70B8\u5F39\uFF01"
+    };
+    const text = names[type] || type;
+    const overlay = document.createElement("div");
+    overlay.className = "effect-overlay";
+    overlay.innerHTML = "<div class=\"effect-text\">" + text + "</div>";
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.remove(), 1200);
+  },
+
   // 隐藏结果
   hideResult() {
     document.getElementById("result-overlay").classList.add("hidden");
   },
 
   reset() {
+    this.stopCountdown();
     this.myIndex = -1;
     this.players = [];
     this.myHand = [];

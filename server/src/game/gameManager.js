@@ -136,12 +136,12 @@ class GameManager {
     const t1b = Math.min(...team1Pos), t1w = Math.max(...team1Pos);
     const t2b = Math.min(...team2Pos), t2w = Math.max(...team2Pos);
     let s1 = 0, s2 = 0;
-    if (t1b === 1 && t1w === 2) { s1 = 3; s2 = -3; }
-    else if (t1b === 1 && t1w === 3) { s1 = 1; s2 = -1; }
-    else if (t1b === 1 && t1w === 4) { s1 = -2; s2 = 2; }
-    else if (t2b === 1 && t2w === 2) { s2 = 3; s1 = -3; }
-    else if (t2b === 1 && t2w === 3) { s2 = 1; s1 = -1; }
-    else if (t2b === 1 && t2w === 4) { s2 = -2; s1 = 2; }
+    if (t1b === 1 && t1w === 2) { s1 = 4; s2 = -4; }  // 每名队员+2
+    else if (t1b === 1 && t1w === 3) { s1 = 2; s2 = -2; }  // 每名队员+1
+    else if (t1b === 1 && t1w === 4) { s1 = 0; s2 = 0; }   // 平局
+    else if (t2b === 1 && t2w === 2) { s2 = 4; s1 = -4; }
+    else if (t2b === 1 && t2w === 3) { s2 = 2; s1 = -2; }
+    else if (t2b === 1 && t2w === 4) { s2 = 0; s1 = 0; }
     return { finishOrder: [...this.finishOrder], team1, team2, team1Score: s1, team2Score: s2, details: this.finishOrder.map((pIdx, pos) => ({ position: pos + 1, nickname: this.players[pIdx].nickname, isDeclarer: pIdx === this.declarerIndex, isTeammate: pIdx === this.teammateIndex })) };
   }
 
