@@ -113,6 +113,7 @@ class GameManager {
     this.passCount++;
     if (this.passCount >= 3) {
       this.lastPlay = null;
+      this.lastPlays = [null, null, null, null];
       this.passCount = 0;
       this.currentTurnIndex = this.lastActiveIndex;
       // 如果最后出牌的人已经出完，跳到下一个没出完的
@@ -146,7 +147,12 @@ class GameManager {
     else if (t2b === 1 && t2w === 2) { s2 = 4; s1 = -4; }
     else if (t2b === 1 && t2w === 3) { s2 = 2; s1 = -2; }
     else if (t2b === 1 && t2w === 4) { s2 = 0; s1 = 0; }
-    return { finishOrder: [...this.finishOrder], team1, team2, team1Score: s1, team2Score: s2, details: this.finishOrder.map((pIdx, pos) => ({ position: pos + 1, nickname: this.players[pIdx].nickname, isDeclarer: pIdx === this.declarerIndex, isTeammate: pIdx === this.teammateIndex })) };
+    const perPlayerScores = {};
+    this.finishOrder.forEach(pIdx => {
+      const isTeam1 = team1.includes(pIdx);
+      perPlayerScores[pIdx] = (isTeam1 ? s1 : s2) / 2;
+    });
+    return { finishOrder: [...this.finishOrder], team1, team2, team1Score: s1, team2Score: s2, perPlayerScores, details: this.finishOrder.map((pIdx, pos) => ({ position: pos + 1, nickname: this.players[pIdx].nickname, isDeclarer: pIdx === this.declarerIndex, isTeammate: pIdx === this.teammateIndex, score: perPlayerScores[pIdx] })) };
   }
 
   getPlayerHand(playerIndex) { return this.players[playerIndex].hand; }

@@ -4,6 +4,13 @@ let myPlayerIndex = -1;
 
 // 自动检测本地存储的昵称
 const savedNick = localStorage.getItem("chuanjian_nickname");
+const savedAvatar = localStorage.getItem("chuanjian_avatar");
+if (savedAvatar) {
+  document.querySelectorAll(".avatar-option").forEach(el => {
+    if (el.dataset.avatar === savedAvatar) el.classList.add("selected-avatar");
+  });
+}
+window._myAvatar = savedAvatar || "";
 if (savedNick) {
   document.getElementById("nickname-input").value = savedNick;
 }
@@ -245,7 +252,7 @@ function renderPlayerList(players) {
     badgeSpan.className = "badge";
     
     if (player) {
-      avatar.textContent = player.isBot ? "\uD83E\uDD16" : player.nickname[0];
+      avatar.textContent = player.isBot ? "\uD83E\uDD16" : (player.avatar || player.nickname[0]);
       nameSpan.textContent = player.nickname;
       
       if (player.isHost) {
@@ -349,7 +356,15 @@ function closeRules() {
   document.getElementById("rules-overlay").classList.add("hidden");
 }
 
-// 音效开关
+// 选择头像
+function selectAvatar(el) {
+  document.querySelectorAll(".avatar-option").forEach(e => e.classList.remove("selected-avatar"));
+  el.classList.add("selected-avatar");
+  const avatar = el.dataset.avatar;
+  localStorage.setItem("chuanjian_avatar", avatar);
+  window._myAvatar = avatar;
+}
+
 function toggleSound() {
   const enabled = Sound.toggle();
   const btn = document.getElementById("sound-toggle");

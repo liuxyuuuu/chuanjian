@@ -16,6 +16,18 @@
       <button class="btn rules-btn small ghost" onclick="toggleRules()">📖 规则</button>
       </div>
       
+      <div class="avatar-picker" id="avatar-picker">
+        <span class="avatar-label">选择头像：</span>
+        <span class="avatar-option" onclick="selectAvatar(this)" data-avatar="😊">😊</span>
+        <span class="avatar-option" onclick="selectAvatar(this)" data-avatar="😎">😎</span>
+        <span class="avatar-option" onclick="selectAvatar(this)" data-avatar="🤠">🤠</span>
+        <span class="avatar-option" onclick="selectAvatar(this)" data-avatar="🐱">🐱</span>
+        <span class="avatar-option" onclick="selectAvatar(this)" data-avatar="🐶">🐶</span>
+        <span class="avatar-option" onclick="selectAvatar(this)" data-avatar="🐉">🐉</span>
+        <span class="avatar-option" onclick="selectAvatar(this)" data-avatar="🦅">🦅</span>
+        <span class="avatar-option" onclick="selectAvatar(this)" data-avatar="🌟">🌟</span>
+      </div>
+
       <div class="lobby-panel">
         <div class="input-group">
           <label>你的昵称</label>
@@ -81,7 +93,6 @@
       <div class="game-top-bar">
         <button class="btn small ghost" onclick="confirmLeave()">退出</button>
         <span id="game-status-text" class="game-status">游戏中</span>
-        <span id="game-timer" class="game-timer"></span>
       </div>
       
       <!-- 游戏桌面 -->
@@ -135,6 +146,9 @@
         </div>
       </div>
       
+      <!-- 倒计时 -->
+      <div id="game-timer" class="game-timer-center">20</div>
+
       <!-- 手牌区域 -->
       <div class="hand-area" id="hand-area">
         <div class="hand-cards" id="hand-cards"></div>

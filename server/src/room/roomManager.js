@@ -21,7 +21,7 @@ class RoomManager {
   }
 
   // 创建房间
-  createRoom(socketId, nickname) {
+  createRoom(socketId, nickname, avatar) {
     const roomCode = this.generateRoomCode();
     const room = {
       code: roomCode,
@@ -29,11 +29,13 @@ class RoomManager {
       players: [{
         socketId,
         nickname,
+        avatar: avatar || "",
         ready: false,
         index: 0,
         isHost: true,
       }],
       game: null,
+      scores: [0, 0, 0, 0],
       createdAt: Date.now(),
       isPlaying: false,
     };
@@ -49,7 +51,7 @@ class RoomManager {
   }
 
   // 加入房间
-  joinRoom(roomCode, socketId, nickname) {
+  joinRoom(roomCode, socketId, nickname, avatar) {
     const room = this.rooms.get(roomCode);
     if (!room) return { success: false, reason: '房间不存在' };
     if (room.isPlaying) return { success: false, reason: '游戏已开始' };
@@ -62,6 +64,7 @@ class RoomManager {
     room.players.push({
       socketId,
       nickname,
+      avatar: avatar || "",
       ready: false,
       index: playerIndex,
       isHost: false,
@@ -160,6 +163,7 @@ class RoomManager {
     const startResult = game.start(room.players.map(p => ({
       socketId: p.socketId,
       nickname: p.nickname,
+      avatar: p.avatar || "",
       isBot: p.isBot || false,
     })));
     
@@ -186,11 +190,21 @@ class RoomManager {
     const startResult = game.start(room.players.map(p => ({
       socketId: p.socketId,
       nickname: p.nickname,
+      avatar: p.avatar || "",
       isBot: p.isBot || false,
     })));
     room.game = game;
     room.isPlaying = true;
     return { success: true, gameInfo: startResult, roomCode };
+  }
+
+  // 更新积分
+  updateScores(roomCode, perPlayerScores) {
+    const room = this.rooms.get(roomCode);
+    if (!room || !perPlayerScores) return;
+    for (const [idx, score] of Object.entries(perPlayerScores)) {
+      room.scores[parseInt(idx)] = (room.scores[parseInt(idx)] || 0) + score;
+    }
   }
 
   // 获取房间信息
@@ -258,6 +272,7 @@ class RoomManager {
     return {
       index: player.index,
       nickname: player.nickname,
+      avatar: player.avatar || "",
       ready: player.ready,
       isHost: player.isHost,
       isBot: player.isBot || false,

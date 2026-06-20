@@ -22,7 +22,7 @@ function broadcastRoomUpdate(roomCode) {
   const room = roomManager.getRoom(roomCode);
   if (!room) return;
   const sanitized = room.players.map(p => ({
-    index: p.index, nickname: p.nickname, ready: p.ready, isHost: p.isHost, isBot: p.isBot || false
+    index: p.index, nickname: p.nickname, avatar: p.avatar || "", ready: p.ready, isHost: p.isHost, isBot: p.isBot || false
   }));
   room.players.forEach(p => {
     io.to(p.socketId).emit('room_update', {
@@ -41,8 +41,9 @@ io.on('connection', (socket) => {
   socket.on('create_room', (data, callback) => {
     const nickname = (data && data.nickname) || `玩家${socket.id.slice(0, 4)}`;
     currentNickname = nickname;
+    const avatar = (data && data.avatar) || "";
     
-    const result = roomManager.createRoom(socket.id, nickname);
+    const result = roomManager.createRoom(socket.id, nickname, avatar);
     socket.join(result.roomCode);
     
     console.log(`[房间] ${nickname} 创建了房间 ${result.roomCode}`);
@@ -82,8 +83,9 @@ io.on('connection', (socket) => {
     
     const nick = nickname || `玩家${socket.id.slice(0, 4)}`;
     currentNickname = nick;
+    const avatar = (data && data.avatar) || "";
     
-    const result = roomManager.joinRoom(roomCode.toUpperCase(), socket.id, nick);
+    const result = roomManager.joinRoom(roomCode.toUpperCase(), socket.id, nick, avatar);
     if (result.success) {
       socket.join(roomCode.toUpperCase());
       broadcastRoomUpdate(result.roomCode);
@@ -127,7 +129,7 @@ io.on('connection', (socket) => {
       });
       
       room.players.forEach((p, i) => {
-        io.to(p.socketId).emit('game_state', game.getGameState(i));
+        io.to(p.socketId).emit('game_state', undefined);
       });
 
       // 如果是电脑庄家，自动叫牌
@@ -185,7 +187,7 @@ io.on('connection', (socket) => {
       });
 
       room.players.forEach((p, i) => {
-        io.to(p.socketId).emit('game_state', room.game.getGameState(i));
+        io.to(p.socketId).emit('game_state', Object.assign(game.getGameState(i), { cumulativeScores: room.scores || [0,0,0,0] }));
       });
 
       const currentPlayer = room.players[result.currentTurn];
@@ -245,7 +247,7 @@ io.on('connection', (socket) => {
       }
       
       room.players.forEach((p, i) => {
-        io.to(p.socketId).emit('game_state', room.game.getGameState(i));
+        io.to(p.socketId).emit('game_state', Object.assign(room.game.getGameState(i), { cumulativeScores: room.scores || [0,0,0,0] }));
       });
       
       const currentPlayer = room.players[result.currentTurn];
@@ -279,7 +281,7 @@ io.on('connection', (socket) => {
       
       if (result.roundReset) {
         room.players.forEach((p, i) => {
-          io.to(p.socketId).emit('game_state', room.game.getGameState(i));
+          io.to(p.socketId).emit('game_state', Object.assign(room.game.getGameState(i), { cumulativeScores: room.scores || [0,0,0,0] }));
         });
         const currentPlayer = room.players[result.currentTurn];
         io.to(currentPlayer.socketId).emit('your_turn', {
@@ -288,7 +290,7 @@ io.on('connection', (socket) => {
         });
       } else {
         room.players.forEach((p, i) => {
-          io.to(p.socketId).emit('game_state', room.game.getGameState(i));
+          io.to(p.socketId).emit('game_state', Object.assign(room.game.getGameState(i), { cumulativeScores: room.scores || [0,0,0,0] }));
         });
         const currentPlayer = room.players[result.currentTurn];
         io.to(currentPlayer.socketId).emit('your_turn', {
@@ -381,7 +383,7 @@ function scheduleBotTurn(roomCode) {
       if (res.success) {
         io.to(roomCode).emit("card_called", { calledCard: res.calledCard, declarerIndex: cr.game.declarerIndex });
         cr.players.forEach((p, i) => {
-          if (!p.isBot) io.to(p.socketId).emit("game_state", cr.game.getGameState(i));
+          if (!p.isBot) io.to(p.socketId).emit("game_state", Object.assign(cr.game.getGameState(i), { cumulativeScores: (roomManager.getRoom(roomCode) || {}).scores || [0,0,0,0] }));
         });
         const np = cr.players[res.currentTurn];
         if (np && !np.isBot) io.to(np.socketId).emit("your_turn", { lastPlay: null, isNewRound: true });
@@ -405,7 +407,7 @@ function scheduleBotTurn(roomCode) {
             return;
           }
           cr.players.forEach((p, i) => {
-            if (!p.isBot) io.to(p.socketId).emit("game_state", cr.game.getGameState(i));
+            if (!p.isBot) io.to(p.socketId).emit("game_state", Object.assign(cr.game.getGameState(i), { cumulativeScores: (roomManager.getRoom(roomCode) || {}).scores || [0,0,0,0] }));
           });
           const np = cr.players[res.currentTurn];
           if (np && !np.isBot) io.to(np.socketId).emit("your_turn", { lastPlay: cr.game.lastPlay, isNewRound: false });
@@ -416,7 +418,7 @@ function scheduleBotTurn(roomCode) {
         if (res.success) {
           io.to(roomCode).emit("player_passed", { playerIndex: res.playerIndex, roundReset: res.roundReset });
           cr.players.forEach((p, i) => {
-            if (!p.isBot) io.to(p.socketId).emit("game_state", cr.game.getGameState(i));
+            if (!p.isBot) io.to(p.socketId).emit("game_state", Object.assign(cr.game.getGameState(i), { cumulativeScores: (roomManager.getRoom(roomCode) || {}).scores || [0,0,0,0] }));
           });
           const np = cr.players[res.currentTurn];
           if (np && !np.isBot) io.to(np.socketId).emit("your_turn", { lastPlay: cr.game.lastPlay, isNewRound: res.roundReset });

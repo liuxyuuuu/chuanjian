@@ -262,3 +262,76 @@ input::placeholder { color: rgba(255,255,255,0.3); }
 
 /* Timer countdown */
 .game-timer { font-variant-numeric: tabular-nums; min-width: 40px; text-align: right; font-weight: bold; }
+
+/* Avatar picker */
+.avatar-picker { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.avatar-label { font-size: 0.8rem; color: rgba(255,255,255,0.5); }
+.avatar-option { font-size: 1.8rem; cursor: pointer; padding: 4px; border-radius: 8px; transition: all 0.15s; border: 2px solid transparent; }
+.avatar-option:hover { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); }
+.avatar-option.selected-avatar { border-color: #ffd700; background: rgba(255,215,0,0.15); }
+
+/* Center countdown */
+.game-timer-center {
+  text-align: center; font-size: 3rem; font-weight: bold; color: rgba(255,255,255,0.8);
+  padding: 4px 0; animation: timer-blink 1s infinite;
+  font-variant-numeric: tabular-nums;
+}
+.game-timer-center.urgent { color: #ff4444; animation: timer-urgent 0.5s infinite; }
+@keyframes timer-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+@keyframes timer-urgent { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); color: #ff0000; } }
+
+/* Sword effect */
+.effect-sword {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 300; pointer-events: none; display: flex; flex-direction: column; align-items: center;
+  animation: sword-entry 0.3s ease-in;
+}
+@keyframes sword-entry { 0% { background: rgba(255,255,255,0); } 50% { background: rgba(255,255,255,0.4); } 100% { background: rgba(255,255,255,0); } }
+.sword-blade { font-size: 6rem; animation: sword-stab 0.6s ease-out forwards; }
+@keyframes sword-stab { 0% { transform: translateY(-200px) rotate(-45deg); opacity: 0; } 40% { transform: translateY(30vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(35vh) rotate(5deg); opacity: 0.9; } }
+.sword-text { font-size: 2.5rem; font-weight: bold; color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,0.7); animation: fade-pop 1s ease-out forwards; margin-top: 20vh; }
+.sword-crack { position: fixed; top: 50%; left: 50%; width: 0; height: 0; box-shadow: 0 0 100px 60px rgba(255,255,255,0.3); animation: crack 0.8s ease-out; }
+@keyframes crack { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,0); } 50% { box-shadow: 0 0 200px 100px rgba(255,255,255,0.4); } 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); } }
+
+/* Thunder effects */
+.effect-thunder { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 300; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.thunder-flash { font-size: 5rem; animation: bolt 0.15s linear 3; }
+@keyframes bolt { 0%,100% { opacity: 1; filter: brightness(1); } 50% { opacity: 0.3; filter: brightness(3); } }
+.thunder-txt { font-size: 2rem; font-weight: bold; color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.8); animation: fade-pop 1s ease-out forwards; margin-top: 8px; }
+.effect-thunder.small-thunder .thunder-flash { font-size: 4rem; color: #ffcc00; }
+.effect-thunder.big-thunder .thunder-flash { font-size: 7rem; color: #fff; animation: bolt 0.1s linear 5; }
+@keyframes shake { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
+
+/* Bomb effects */
+.effect-bomb { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 300; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.bomb-core { font-size: 4rem; animation: bomb-explode 0.4s ease-out; }
+@keyframes bomb-explode { 0% { transform: scale(0.2); opacity: 0; } 60% { transform: scale(1.5); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
+.bomb-text { font-size: 2rem; font-weight: bold; color: #ff4444; text-shadow: 0 0 20px rgba(255,0,0,0.7); animation: fade-pop 1s ease-out forwards; margin-top: 4px; }
+.bomb-particle { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border-radius: 50%; animation: particle-fly 0.8s ease-out forwards; }
+.bomb-particle:nth-child(1) { background: #ff0; animation-delay: 0s; }
+.bomb-particle:nth-child(2) { background: #f80; animation-delay: 0.05s; }
+.bomb-particle:nth-child(3) { background: #f00; animation-delay: 0.1s; }
+.bomb-particle:nth-child(4) { background: #ff0; animation-delay: 0.15s; }
+.bomb-particle:nth-child(5) { background: #f80; animation-delay: 0.2s; }
+.bomb-particle:nth-child(6) { background: #f00; animation-delay: 0.25s; }
+.bomb-particle:nth-child(7) { background: #fff; animation-delay: 0.3s; }
+.bomb-particle:nth-child(8) { background: #ff0; animation-delay: 0.35s; }
+.bomb-particle:nth-child(9) { background: #f80; animation-delay: 0.4s; }
+.bomb-particle:nth-child(10) { background: #f00; animation-delay: 0.45s; }
+.bomb-particle:nth-child(11) { background: #fff; animation-delay: 0.5s; }
+.bomb-particle:nth-child(12) { background: #ff0; animation-delay: 0.55s; }
+@keyframes particle-fly { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--px,100px), var(--py,-120px)) scale(0); opacity: 0; } }
+.bomb-particle:nth-child(1) { --px: 60px; --py: -80px; }
+.bomb-particle:nth-child(2) { --px: -60px; --py: -90px; }
+.bomb-particle:nth-child(3) { --px: 80px; --py: -60px; }
+.bomb-particle:nth-child(4) { --px: -80px; --py: -70px; }
+.bomb-particle:nth-child(5) { --px: 100px; --py: -40px; }
+.bomb-particle:nth-child(6) { --px: -100px; --py: -50px; }
+.bomb-particle:nth-child(7) { --px: 40px; --py: -100px; }
+.bomb-particle:nth-child(8) { --px: -40px; --py: -110px; }
+.bomb-particle:nth-child(9) { --px: 120px; --py: -30px; }
+.bomb-particle:nth-child(10) { --px: -120px; --py: -35px; }
+.bomb-particle:nth-child(11) { --px: 50px; --py: -120px; }
+.bomb-particle:nth-child(12) { --px: -50px; --py: -130px; }
+
+@keyframes fade-pop { 0% { transform: scale(0.3); opacity: 0; } 30% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }

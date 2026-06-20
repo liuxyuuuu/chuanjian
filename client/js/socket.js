@@ -98,15 +98,15 @@ function initSocket() {
 }
 
 // ===== 服务端通信封装 =====
-function emitCreateRoom(nickname) {
+function emitCreateRoom(nickname, avatar) {
   return new Promise((resolve) => {
-    socket.emit("create_room", { nickname }, (res) => resolve(res));
+    socket.emit("create_room", { nickname, avatar }, (res) => resolve(res));
   });
 }
 
-function emitJoinRoom(roomCode, nickname) {
+function emitJoinRoom(roomCode, nickname, avatar) {
   return new Promise((resolve) => {
-    socket.emit("join_room", { roomCode, nickname }, (res) => resolve(res));
+    socket.emit("join_room", { roomCode, nickname, avatar }, (res) => resolve(res));
   });
 }
 

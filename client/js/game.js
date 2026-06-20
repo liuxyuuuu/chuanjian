@@ -55,7 +55,11 @@ const GameUI = {
       const countEl = seatEl.querySelector(".player-card-count");
       const badgeEl = seatEl.querySelector(".player-badge");
       
-      if (nameEl) nameEl.textContent = (p.isBot ? "🤖 " : "") + p.nickname;
+      if (nameEl) {
+        const avatar = p.avatar || (p.isBot ? "🤖" : p.nickname[0]);
+        const score = (this.gameState?.cumulativeScores || [0,0,0,0])[i] || 0;
+        nameEl.textContent = avatar + " " + p.nickname + (p.isBot ? "" : " [" + score + "分]");
+      }
       if (countEl) {
         if (p.finished) {
           countEl.textContent = `✓ 第${p.finishPosition}名`;
@@ -428,18 +432,18 @@ const GameUI = {
     this._countdownSec = seconds;
     const timerEl = document.getElementById("game-timer");
     if (!timerEl) return;
-    timerEl.textContent = this._countdownSec + "s";
-    timerEl.style.color = this._countdownSec <= 5 ? "#ff4444" : "rgba(255,255,255,0.8)";
+    timerEl.textContent = this._countdownSec;
+    timerEl.className = "game-timer-center" + (this._countdownSec <= 5 ? " urgent" : "");
     this._countdownTimer = setInterval(() => {
       this._countdownSec--;
       if (this._countdownSec <= 0) {
         this.stopCountdown();
-        timerEl.textContent = "超时！";
-        timerEl.style.color = "#ff4444";
+        timerEl.textContent = "超时!";
+        timerEl.className = "game-timer-center urgent";
         return;
       }
-      timerEl.textContent = this._countdownSec + "s";
-      timerEl.style.color = this._countdownSec <= 5 ? "#ff4444" : "rgba(255,255,255,0.8)";
+      timerEl.textContent = this._countdownSec;
+      timerEl.className = "game-timer-center" + (this._countdownSec <= 5 ? " urgent" : "");
     }, 1000);
   },
 
@@ -450,7 +454,7 @@ const GameUI = {
       this._countdownTimer = null;
     }
     const timerEl = document.getElementById("game-timer");
-    if (timerEl) timerEl.textContent = "";
+    if (timerEl) { timerEl.textContent = ""; timerEl.className = "game-timer-center"; }
   },
 
   // 特殊牌型特效
