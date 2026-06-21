@@ -58,8 +58,12 @@ const Sound = {
     u.rate = opts.rate || 1.0;
     u.pitch = opts.pitch || 0.9;
     var voices = window.speechSynthesis.getVoices();
+    var zh = voices.find(function(v){ return v.lang.startsWith('zh'); });
+    if (zh) u.voice = zh;
+    // Speak immediately (don't wait for voices on mobile)
+    window.speechSynthesis.speak(u);
+    // If no voices now, retry once after they load
     if (voices.length === 0) {
-      // Mobile: voices not loaded yet, retry after load
       var self = this;
       window.speechSynthesis.onvoiceschanged = function() {
         window.speechSynthesis.onvoiceschanged = null;
@@ -68,11 +72,7 @@ const Sound = {
         if (zh2) u.voice = zh2;
         window.speechSynthesis.speak(u);
       };
-      return;
     }
-    var zh = voices.find(function(v){ return v.lang.startsWith('zh'); });
-    if (zh) u.voice = zh;
-    window.speechSynthesis.speak(u);
   },
   warmupSpeech() {
     if (!window.speechSynthesis) return;
