@@ -11,6 +11,9 @@ if (savedAvatar) {
   });
 }
 window._myAvatar = savedAvatar || "";
+var goldCoins = parseInt(localStorage.getItem("chuanjian_gold") || "100");
+var goldEl = document.getElementById("gold-amount");
+if (goldEl) goldEl.textContent = goldCoins;
 if (savedNick) {
   document.getElementById("nickname-input").value = savedNick;
 }
@@ -274,6 +277,56 @@ function throwTomato(targetName, avatarEl) {
 }
 
 // 大厅模式选择
+
+// Gold & Match functions
+function updateGold(amount) {
+  goldCoins += amount;
+  if (goldCoins < 0) goldCoins = 0;
+  localStorage.setItem("chuanjian_gold", goldCoins);
+  var el = document.getElementById("gold-amount");
+  if (el) el.textContent = goldCoins;
+  return goldCoins;
+}
+
+function playAgain() {
+  GameUI.hideResult();
+  emitRestartGame();
+}
+
+function backToLobby() {
+  GameUI.hideResult();
+  GameUI.reset();
+  myPlayerIndex = -1;
+  emitLeaveRoom();
+  UI.showPage("lobby-page");
+}
+
+function startOnlineMatch() {
+  var nick = getNickname();
+  saveNickname(nick);
+  myNickname = nick;
+  var av = window._myAvatar || localStorage.getItem("chuanjian_avatar") || "";
+  if (!socket || !socket.connected) { UI.showToast("正在连接服务器..."); return; }
+  document.getElementById("match-overlay").classList.remove("hidden");
+  document.getElementById("match-timer").textContent = "20";
+  document.getElementById("match-info").textContent = "已找到 1/4 人";
+  var timer = setInterval(function(){
+    var t = parseInt(document.getElementById("match-timer").textContent);
+    if (t <= 0) { clearInterval(timer); return; }
+    document.getElementById("match-timer").textContent = t - 1;
+  }, 1000);
+  socket.emit("quick_match", { nickname: nick, avatar: av }, function(res){
+    if (res && res.queueSize) {
+      document.getElementById("match-info").textContent = "已找到 " + res.queueSize + "/4 人";
+    }
+  });
+}
+
+function cancelMatch() {
+  document.getElementById("match-overlay").classList.add("hidden");
+  socket.emit("cancel_match");
+}
+
 function startAIGame() {
   const nick = getNickname();
   saveNickname(nick);
@@ -281,7 +334,7 @@ function startAIGame() {
   const avatar = window._myAvatar || localStorage.getItem("chuanjian_avatar") || "";
   if (!socket || !socket.connected) { UI.showToast("正在连接服务器..."); return; }
   UI.showToast("正在启动...");
-  socket.emit("quick_start_ai", { nickname: nick, avatar }, (res) => {
+  socket.emit("quick_start_ai", { nickname: nick, avatar, difficulty: "ai" }, (res) => {
     if (!res.success) UI.showToast("启动失败");
   });
 }

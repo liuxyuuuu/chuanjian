@@ -20,7 +20,9 @@ function initSocket() {
   });
 
   // 游戏开始
-  socket.on('game_start', (data) => {
+  var _isQuickAI = false;
+socket.on('game_start', (data) => {
+    window._isQuickAI = data.isQuickAI || false;
     UI.showPage('game-page');
     Sound.play('gameStart');
     
@@ -57,6 +59,10 @@ function initSocket() {
 
   // 轮到叫牌
   socket.on('your_turn_call', (data) => {
+    // Remove dealing overlay immediately so call overlay is visible
+    if (window._dealTimer) { clearTimeout(window._dealTimer); window._dealTimer = null; }
+    var d = document.getElementById('dealing-overlay');
+    if (d) { d.style.opacity = '0'; setTimeout(function(){ if(d.parentNode) d.remove(); }, 100); }
     GameUI.showCallOverlay(data.myHand);
   });
 
@@ -65,6 +71,7 @@ function initSocket() {
     GameUI.calledCardId = data.calledCard;
     GameUI.hideCallOverlay();
     Sound.play('callCard');
+    Sound.speakEvent('call', { cardId: data.calledCard });
   });
 
   // 队友信息（只发给庄家）
@@ -79,6 +86,12 @@ function initSocket() {
     GameUI.isMyTurn = (data.currentTurn === data.myIndex) && data.phase === 'playing';
     GameUI.renderTable(data);
     
+    // Remove first dealing-overlay when game state arrives
+    (function(){
+      if (window._dealTimer) { clearTimeout(window._dealTimer); window._dealTimer = null; }
+      var dd = document.getElementById('dealing-overlay');
+      if (dd) { dd.style.opacity = '0'; setTimeout(function(){ if(dd.parentNode) dd.remove(); }, 100); }
+    })();
     // First state: trigger dealing animation
     if (wasFirstState && data.myHand && data.myHand.length > 0) {
       // Wait a tiny bit for layout to settle, then animate
@@ -124,7 +137,15 @@ function initSocket() {
   socket.on('cards_played', (data) => {
     GameUI.clearSelection();
     Sound.play('playCard');
-    
+    // Animate cards flying from player seat to center
+    if (data.cards && data.cards.length > 0) {
+      const cardIds = data.cards.map(function(c) { return c.id || c; });
+      GameUI.animateCardsFly(data.playerIndex, cardIds);
+    }
+    // Speak card names aloud
+    if (data.cards && data.cards.length > 0) {
+      Sound.speakCards(data.cards, data.handAnalysis?.type);
+    }
     // Dispatch special effects based on hand type
     if (data.handAnalysis) {
       const type = data.handAnalysis.type;
@@ -155,6 +176,7 @@ function initSocket() {
   // 队友揭晓
   socket.on('teammate_revealed', (data) => {
     GameUI.showTeammateReveal(data);
+    Sound.speakEvent('reveal');
   });
 
   // 游戏结束

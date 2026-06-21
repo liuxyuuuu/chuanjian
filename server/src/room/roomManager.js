@@ -8,6 +8,23 @@ class RoomManager {
   }
 
   // 生成6位房间码
+
+  createMatchRoom(players) {
+    var roomCode = this.generateRoomCode();
+    var room = {
+      code: roomCode,
+      id: require('uuid').v4(),
+      players: players.map(function(p, i) { return {
+        socketId: p.socketId, nickname: p.nickname, avatar: p.avatar || '',
+        ready: false, index: i, isHost: i === 0, isBot: p.isBot || false,
+      }; }),
+      game: null, scores: [0,0,0,0], createdAt: Date.now(), isPlaying: false,
+    };
+    this.rooms.set(roomCode, room);
+    players.forEach(function(p) { this.socketRooms.set(p.socketId, roomCode); }.bind(this));
+    return room;
+  }
+
   generateRoomCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code;

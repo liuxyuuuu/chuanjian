@@ -10,6 +10,8 @@ const Sound = {
     if (this._ctx && this._ctx.state === 'suspended') this._ctx.resume();
   },
   toggle() { this._enabled = !this._enabled; return this._enabled; },
+  speechStyle: 'long',
+  toggleSpeechStyle() { this.speechStyle = this.speechStyle === 'long' ? 'short' : 'long'; return this.speechStyle; },
   play(type) {
     if (!this._enabled) return;
     try {
@@ -45,6 +47,81 @@ const Sound = {
       osc.start(t); osc.stop(t + dur + 0.02);
     }
   },
+
+  _speak(text, opts) {
+    opts = opts || {};
+    if (!this._enabled) return;
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN';
+    u.rate = opts.rate || 1.0;
+    u.pitch = opts.pitch || 0.9;
+    var voices = window.speechSynthesis.getVoices();
+    var zh = voices.find(function(v){ return v.lang.startsWith('zh'); });
+    if (zh) u.voice = zh;
+    window.speechSynthesis.speak(u);
+  },
+
+  _rankToChinese(rank) {
+    var map = { '3': '三', '2': '二', 'A': '尖', 'K': '凯', 'Q': '圈', 'J': '勾',
+      '10': '十', '9': '九', '8': '八', '7': '七', '6': '六', '5': '五', '4': '四' };
+    return map[rank] || rank;
+  },
+  speakCards(cards, handType) {
+    if (!this._enabled) return;
+    if (!window.speechSynthesis) return;
+    var text = this._getHandSpeech(cards, handType);
+    if (!text) return;
+    var opts = {};
+    if (handType === 'sword_44a' || handType === 'small_thunder' || handType === 'big_thunder' || handType === 'bomb') {
+      opts.rate = 0.85;
+      opts.pitch = 0.8;
+    }
+    this._speak(text, opts);
+  },
+  speakEvent(eventType, data) {
+    if (!this._enabled) return;
+    var text = this._getEventSpeech(eventType, data);
+    if (text) this._speak(text, eventType === 'reveal' ? { rate: 1.0, pitch: 0.85 } : {});
+  },
+  _getEventSpeech(eventType, data) {
+    if (eventType === 'call' && data && data.cardId) {
+      var suitNames = { S: '黑桃', H: '红心', C: '梅花', D: '方块' };
+      return '庄家叫牌' + (suitNames[data.cardId[0]] || '') + this._rankToChinese(data.cardId.slice(1));
+    }
+    if (eventType === 'reveal') {
+      var r = ['盟友已现，并肩作战', '信物显形，同袍在此', '叫牌已出，队友现身'];
+      return r[Math.floor(Math.random() * r.length)];
+    }
+    return '';
+  },
+
+  _getHandSpeech(cards, handType) {
+    var specials = { sword_44a: '剑', small_thunder: '小雷', big_thunder: '大雷', bomb: '炸弹' };
+    if (handType && specials[handType]) return specials[handType];
+    if (!cards || cards.length === 0) return '';
+    if (handType === 'pair') return '对' + this._rankToChinese(cards[0].rank);
+    if (handType === 'straight' || handType === 'consecutive_pairs') {
+      if (cards.length >= 2) {
+        var fr = this._rankToChinese(cards[0].rank);
+        var lr = this._rankToChinese(cards[cards.length-1].rank);
+        return fr + '到' + lr;
+      }
+      return handType === 'straight' ? '顺子' : '连对';
+    }
+    if (handType === 'three_one') return '三带一';
+    if (handType === 'three_two') return '三带二';
+    // Single or unknown - read ranks
+    var text = '';
+    for (var i = 0; i < cards.length; i++) {
+      var rank = cards[i].rank || (typeof cards[i] === 'string' ? cards[i].slice(1) : '');
+      if (i > 0) text += ' ';
+      text += this._rankToChinese(rank);
+    }
+    return text;
+  },
+
   _sweep(f0, f1, dur) {
     const t = this._ctx.currentTime;
     const osc = this._ctx.createOscillator();

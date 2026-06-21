@@ -32,6 +32,15 @@ const GameUI = {
     return this._seats[idx] || 'player-bottom';
   },
 
+  moveActionBarToTop() {
+    const bar = document.getElementById('action-bar');
+    const timer = document.getElementById('game-timer');
+    const container = document.querySelector('.game-container');
+    if (bar && timer && container && bar.parentNode === container) {
+      container.insertBefore(bar, timer);
+    }
+  },
+
   getSeatName(playerIndex) {
     const idx = this.seatOrder.indexOf(playerIndex);
     return ['bottom', 'right', 'top', 'left'][idx] || 'bottom';
@@ -46,6 +55,9 @@ const GameUI = {
 
     if (!this.seatOrder.length) this.initSeats(this.myIndex);
 
+    // Move action bar above hand area
+    this.moveActionBarToTop();
+
     // Render four seats
     this.players.forEach((p, i) => {
       const seat = this.getSeatForPlayerIndex(i);
@@ -54,7 +66,7 @@ const GameUI = {
       const seatEl = document.getElementById(seat);
       if (!seatEl) return;
 
-      this.renderPlayerLastPlay(i, seat);
+      this.renderPlayerLastPlay(i, this.getSeatName(i));
 
       const nameEl = seatEl.querySelector('.player-name');
       const countEl = seatEl.querySelector('.player-card-count');
@@ -110,15 +122,19 @@ const GameUI = {
       if (p.finished) {
         badgeEl.classList.add('finished');
         badgeEl.textContent = `#${p.finishPosition}`;
-      } else if (this.gameState.currentTurn === i && !this.isMyTurn) {
-        badgeEl.classList.add('active');
-        badgeEl.textContent = '出牌中';
-      } else if (p.isDeclarer && this.gameState.teammateRevealed) {
+      } else if (p.isDeclarer) {
         badgeEl.classList.add('declarer');
         badgeEl.textContent = '庄';
       } else if (p.isTeammate) {
-        badgeEl.classList.add('teammate');
-        badgeEl.textContent = '队友';
+        badgeEl.classList.add('bangzhuang');
+        badgeEl.textContent = '帮庄';
+      } else if (!this.gameState.teammateRevealed) {
+        badgeEl.classList.add('xian');
+        badgeEl.textContent = '闲';
+      }
+      // Active turn pulse (keeps role text, adds glow)
+      if (this.gameState.currentTurn === i && !this.isMyTurn && !p.finished) {
+        badgeEl.classList.add('active');
       }
     });
 
@@ -165,12 +181,52 @@ const GameUI = {
     const lp = lastPlays[playerIndex];
     if (!lp || !lp.cards || lp.cards.length === 0) return;
 
+    // Add hand type label per-seat
+    if (lp.handAnalysis && lp.handAnalysis.type) {
+      const typeLabel = document.createElement('div');
+      typeLabel.className = 'played-label';
+      typeLabel.textContent = UI.getHandName(lp.handAnalysis.type);
+      container.appendChild(typeLabel);
+    }
+
     lp.cards.forEach(cardId => {
       const suit = cardId[0];
       const rank = cardId.slice(1);
       const el = UI.renderCardElement({ suit, rank });
-      el.style.cssText = 'width:22px;height:32px;font-size:0.6rem;margin:0 1px;';
+      el.style.cssText = 'width:30px;height:40px;font-size:0.7rem;margin:0 2px;';
       container.appendChild(el);
+    });
+  },
+
+  animateCardsFly(playerIndex, cards) {
+    if (playerIndex === this.myIndex) return;
+    const seatName = this.getSeatName(playerIndex);
+    const seatEl = document.getElementById(`player-${seatName}`);
+    const targetEl = document.getElementById("played-${seatName}");
+    if (!seatEl || !targetEl) return;
+
+    const src = seatEl.getBoundingClientRect();
+    const dst = targetEl.getBoundingClientRect();
+
+    cards.forEach((cardId, i) => {
+      const suit = cardId[0];
+      const rank = cardId.slice(1);
+      const el = UI.renderCardElement({ suit, rank });
+      el.className += ' flying-card';
+      const startX = src.left + src.width / 2 - 22;
+      const startY = src.top + src.height / 2 - 29;
+      const dx = dst.left + dst.width / 2 - startX - 22;
+      const dy = dst.top + dst.height / 2 - startY - 29;
+      el.style.position = 'fixed';
+      el.style.left = startX + 'px';
+      el.style.top = startY + 'px';
+      el.style.zIndex = '500';
+      el.style.pointerEvents = 'none';
+      el.style.setProperty('--dx', dx + 'px');
+      el.style.setProperty('--dy', dy + 'px');
+      el.style.animationDelay = (i * 0.06) + 's';
+      document.body.appendChild(el);
+      el.addEventListener('animationend', function() { el.remove(); }, { once: true });
     });
   },
 
@@ -202,13 +258,7 @@ const GameUI = {
     area.innerHTML = '';
     if (!lastPlay || !lastPlay.cards) return;
 
-    const player = this.players[lastPlay.playerIndex];
-    if (player) {
-      const label = document.createElement('div');
-      label.style.cssText = 'color:rgba(230,200,100,0.3);font-size:0.68rem;margin-bottom:4px;text-align:center;letter-spacing:1px;';
-      label.textContent = `${player.nickname} · ${UI.getHandName(lastPlay.handAnalysis?.type)}`;
-      area.appendChild(label);
-    }
+    // Label moved to per-seat area
 
     const cardsDiv = document.createElement('div');
     cardsDiv.style.cssText = 'display:flex;gap:4px;justify-content:center;';
@@ -408,8 +458,8 @@ const GameUI = {
       scoreVal.textContent = d.score > 0 ? `+${d.score}` : `${d.score}`;
 
       const role = document.createElement('span');
-      role.className = `result-role ${d.isDeclarer ? 'declarer' : ''} ${d.isTeammate ? 'teammate' : ''}`;
-      role.textContent = d.isDeclarer ? '庄家' : d.isTeammate ? '队友' : '';
+      role.className = `result-role ${d.isDeclarer ? 'declarer' : ''} ${d.isTeammate ? 'bangzhuang' : ''} ${!d.isDeclarer && !d.isTeammate ? 'xian' : ''}`;
+      role.textContent = d.isDeclarer ? '庄' : d.isTeammate ? '帮庄' : '闲';
 
       item.appendChild(pos);
       item.appendChild(name);
@@ -440,13 +490,32 @@ const GameUI = {
       title.textContent = '和';
     }
 
+    // Gold update for online matches
+    if (window._isMatch) {
+      var goldChange = 0;
+      if (myTeamScore > 0) goldChange = 10;
+      else if (myTeamScore < 0) goldChange = -10;
+      var goldDiv = document.getElementById('result-gold');
+      if (goldDiv) {
+        if (goldChange > 0) goldDiv.textContent = '🪙 +' + goldChange + ' 金币';
+        else if (goldChange < 0) goldDiv.textContent = '🪙 ' + goldChange + ' 金币';
+        else goldDiv.textContent = '';
+      }
+      if (typeof updateGold === 'function' && goldChange !== 0) {
+        updateGold(goldChange);
+      }
+    }
     Sound.play(myTeamScore > 0 ? 'win' : 'lose');
     details.appendChild(scoreDiv);
 
     overlay.classList.remove('hidden');
 
-    if (window._restartTimer) clearTimeout(window._restartTimer);
-    window._restartTimer = setTimeout(() => emitRestartGame(), 6000);
+    if (window._isQuickAI) {
+      // AI mode: don't auto-restart, let user click back
+    } else {
+      if (window._restartTimer) clearTimeout(window._restartTimer);
+      window._restartTimer = setTimeout(() => emitRestartGame(), 6000);
+    }
   },
 
   startCountdown(seconds) {
@@ -458,8 +527,22 @@ const GameUI = {
     timerEl.className = 'game-timer-center';
     this._countdownTimer = setInterval(() => {
       this._countdownSec--;
-      if (this._countdownSec <= 0) {
+        if (this._countdownSec <= 0) {
         this.stopCountdown();
+        // Auto-play or pass on timeout
+        if (this.isMyTurn && this.myHand.length > 0) {
+          if (this.gameState && this.gameState.lastPlay && typeof emitPass === 'function') {
+            emitPass();
+          } else if (typeof emitPlayCards === 'function') {
+            var cards = [...this.myHand].sort(function(a,b){return a.value-b.value;});
+            if (cards.length > 0) {
+              var card = cards[0];
+              this.myHand = this.myHand.filter(function(c){return c.id!==card.id;});
+              this.renderHand();
+              emitPlayCards([card.id], [card]);
+            }
+          }
+        }
         timerEl.textContent = '超时';
         timerEl.className = 'game-timer-center urgent';
         return;

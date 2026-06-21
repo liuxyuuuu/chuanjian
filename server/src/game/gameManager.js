@@ -98,7 +98,35 @@ class GameManager {
         this.phase = PHASE.FINISHED;
         this.currentTurnIndex = -1;
       } else {
-        this.advanceTurn();
+        var _earlyEnd = false;
+        if (this.finishOrder.length >= 2) {
+          var _t1 = [this.declarerIndex, this.teammateIndex];
+          var _t2 = [];
+          for (var _ti = 0; _ti < 4; _ti++) {
+            if (_ti !== this.declarerIndex && _ti !== this.teammateIndex) _t2.push(_ti);
+          }
+          var _t1f = 0, _t2f = 0;
+          for (var _fi = 0; _fi < _t1.length; _fi++) { if (this.players[_t1[_fi]].finished) _t1f++; }
+          for (var _fi = 0; _fi < _t2.length; _fi++) { if (this.players[_t2[_fi]].finished) _t2f++; }
+          if (_t1f === 2 || _t2f === 2) {
+            _earlyEnd = true;
+            remaining.forEach(function(p) {
+              p.finished = true;
+              p.finishPosition = this.finishOrder.length + 1;
+              this.finishOrder.push(this.players.indexOf(p));
+            }.bind(this));
+            this.phase = PHASE.FINISHED;
+            this.currentTurnIndex = -1;
+          }
+        }
+        if (!_earlyEnd) {
+          var tm = this.teammateRevealed ? this.getPlayerTeammate(playerIndex) : null;
+          if (tm !== null && !this.players[tm].finished) {
+            this.currentTurnIndex = tm;
+          } else {
+            this.advanceTurn();
+          }
+        }
       }
     } else {
       this.advanceTurn();
@@ -114,14 +142,20 @@ class GameManager {
     if (playerIndex !== this.currentTurnIndex) return { success: false, reason: '不是你的回合' };
     if (!this.lastPlay) return { success: false, reason: '你是本轮第一个出牌，不能过' };
     this.passCount++;
-    if (this.passCount >= 3) {
+    var activePlayers = this.players.filter(function(p){ return !p.finished; }).length;
+    if (this.passCount >= Math.max(1, activePlayers - 1)) {
       this.lastPlay = null;
       this.lastPlays = [null, null, null, null];
       this.passCount = 0;
       this.currentTurnIndex = this.lastActiveIndex;
-      // 如果最后出牌的人已经出完，跳到下一个没出完的
+      // 接风: teammate gets lead only if revealed, otherwise order
       if (this.players[this.currentTurnIndex].finished) {
-        this.advanceTurn();
+        var tm2 = this.teammateRevealed ? this.getPlayerTeammate(this.lastActiveIndex) : null;
+        if (tm2 !== null && !this.players[tm2].finished) {
+          this.currentTurnIndex = tm2;
+        } else {
+          this.advanceTurn();
+        }
       }
       return { success: true, playerIndex, passed: true, roundReset: true, currentTurn: this.currentTurnIndex };
     }
@@ -134,6 +168,14 @@ class GameManager {
     let attempts = 0;
     while (this.players[next].finished && attempts < 4) { next = (next + 1) % 4; attempts++; }
     this.currentTurnIndex = next;
+  }
+
+  getPlayerTeammate(playerIndex) {
+    if (this.declarerIndex === undefined || this.teammateIndex === undefined || this.teammateIndex === -1) return null;
+    if (playerIndex === this.declarerIndex) return this.teammateIndex;
+    if (playerIndex === this.teammateIndex) return this.declarerIndex;
+    var team2 = [0,1,2,3].filter(function(i){ return i !== this.declarerIndex && i !== this.teammateIndex; }.bind(this));
+    return team2.find(function(i){ return i !== playerIndex; }) || null;
   }
 
   getResult() {
