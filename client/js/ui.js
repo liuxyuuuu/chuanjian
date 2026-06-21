@@ -58,9 +58,30 @@ const Sound = {
     u.rate = opts.rate || 1.0;
     u.pitch = opts.pitch || 0.9;
     var voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) {
+      // Mobile: voices not loaded yet, retry after load
+      var self = this;
+      window.speechSynthesis.onvoiceschanged = function() {
+        window.speechSynthesis.onvoiceschanged = null;
+        var v2 = window.speechSynthesis.getVoices();
+        var zh2 = v2.find(function(v){ return v.lang.startsWith('zh'); });
+        if (zh2) u.voice = zh2;
+        window.speechSynthesis.speak(u);
+      };
+      return;
+    }
     var zh = voices.find(function(v){ return v.lang.startsWith('zh'); });
     if (zh) u.voice = zh;
     window.speechSynthesis.speak(u);
+  },
+  warmupSpeech() {
+    if (!window.speechSynthesis) return;
+    // Prime the speech engine (required by iOS/mobile)
+    window.speechSynthesis.getVoices();
+    var u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    window.speechSynthesis.speak(u);
+    window.speechSynthesis.cancel();
   },
 
   _rankToChinese(rank) {
@@ -93,6 +114,9 @@ const Sound = {
     if (eventType === 'reveal') {
       var r = ['盟友已现，并肩作战', '信物显形，同袍在此', '叫牌已出，队友现身'];
       return r[Math.floor(Math.random() * r.length)];
+    }
+    if (eventType === 'pass') {
+      return '过牌';
     }
     return '';
   },

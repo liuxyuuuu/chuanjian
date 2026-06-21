@@ -166,6 +166,7 @@ socket.on('game_start', (data) => {
     Sound.play('pass');
     const player = GameUI.players[data.playerIndex];
     const name = player ? player.nickname : '玩家';
+    Sound.speakEvent('pass');
     if (data.roundReset) {
       UI.showToast(name + ' 过，新回合始');
     } else {
