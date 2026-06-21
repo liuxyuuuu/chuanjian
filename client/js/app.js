@@ -302,6 +302,7 @@ function backToLobby() {
 }
 
 function startOnlineMatch() {
+  lockLandscape();
   var nick = getNickname();
   saveNickname(nick);
   myNickname = nick;
@@ -327,7 +328,22 @@ function cancelMatch() {
   socket.emit("cancel_match");
 }
 
+function lockLandscape() {
+  var el = document.documentElement;
+  if (el.requestFullscreen) {
+    el.requestFullscreen().then(function(){
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(function(){});
+      }
+    }).catch(function(){});
+  } else if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock('landscape').catch(function(){});
+  }
+}
+
 function startAIGame() {
+  lockLandscape();
+  if (Sound.warmupSpeech) Sound.warmupSpeech();
   const nick = getNickname();
   saveNickname(nick);
   myNickname = nick;
