@@ -1,4 +1,4 @@
-const { RANK_ORDER, STRAIGHT_VALUES, sortCards } = require('./deck');
+﻿const { RANK_ORDER, STRAIGHT_VALUES, PAIR_STRAIGHT_VALUES, sortCards } = require('./deck');
 
 // 牌型枚举
 const HAND_TYPE = {
@@ -118,7 +118,7 @@ function analyzeHand(cards) {
       // 检查是否连续（用顺子值检查）
       const sortedPairVals = [...pairValues].sort((a, b) => a - b);
       const straightRanks = sortedPairVals.map(v => rankFromValue(v));
-      if (isConsecutiveStraight(straightRanks)) {
+      if (isConsecutiveStraight(straightRanks, true)) {
         return { type: HAND_TYPE.CONSECUTIVE_PAIRS, mainValue: Math.max(...pairValues), length: n, pairCount: pairs };
       }
     }
@@ -156,8 +156,9 @@ function rankFromValue(value) {
 }
 
 // 检查是否是连续顺子的点数（用STRAIGHT_VALUES，3不参与）
-function isConsecutiveStraight(ranks) {
-  const vals = ranks.map(r => STRAIGHT_VALUES[r]).filter(v => v !== undefined);
+function isConsecutiveStraight(ranks, usePairValues) {
+  const valueMap = usePairValues ? PAIR_STRAIGHT_VALUES : STRAIGHT_VALUES;
+  const vals = ranks.map(r => valueMap[r]).filter(v => v !== undefined);
   if (vals.length !== ranks.length) return false;
   vals.sort((a, b) => a - b);
   for (let i = 1; i < vals.length; i++) {

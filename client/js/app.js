@@ -1,4 +1,4 @@
-// ===== 应用入口 =====
+﻿// ===== 应用入口 =====
 let myNickname = "";
 let myPlayerIndex = -1;
 
@@ -209,6 +209,81 @@ function confirmLeave() {
 
 function closeConfirm() {
   UI.hideOverlay("confirm-overlay");
+}
+
+// ===== 模式选择 =====
+
+
+
+function startPVPGame() {
+  document.getElementById("mode-select").classList.add("hidden");
+  document.getElementById("pvp-actions").classList.remove("hidden");
+}
+
+function backToModes() {
+  document.getElementById("mode-select").classList.remove("hidden");
+  document.getElementById("pvp-actions").classList.add("hidden");
+}
+
+// ===== 扔番茄 =====
+
+function throwTomato(targetName, avatarEl) {
+  if (!avatarEl) return;
+  
+  const rect = avatarEl.getBoundingClientRect();
+  const container = document.getElementById("tomato-container");
+  
+  // Flying tomato
+  const tomato = document.createElement("div");
+  tomato.className = "tomato-fly";
+  tomato.textContent = "🍅";
+  tomato.style.left = (window.innerWidth / 2 - 20) + "px";
+  tomato.style.top = (window.innerHeight - 120) + "px";
+  container.appendChild(tomato);
+  
+  setTimeout(() => {
+    tomato.remove();
+    
+    // Splat on avatar
+    const splat = document.createElement("div");
+    splat.className = "tomato-splat";
+    splat.textContent = "💥";
+    splat.style.left = (rect.left + rect.width / 2 - 16) + "px";
+    splat.style.top = (rect.top + rect.height / 2 - 16) + "px";
+    container.appendChild(splat);
+    
+    // Juice particles
+    for (let i = 0; i < 6; i++) {
+      const juice = document.createElement("div");
+      juice.className = "tomato-juice";
+      juice.style.width = "6px";
+      juice.style.height = "6px";
+      juice.style.background = ["#e74c3c","#c0392b","#ff6b6b","#d63031"][i % 4];
+      juice.style.left = (rect.left + rect.width / 2) + "px";
+      juice.style.top = (rect.top + rect.height / 2) + "px";
+      juice.style.setProperty("--dx", (Math.random() - 0.5) * 60 + "px");
+      juice.style.setProperty("--dy", (Math.random() - 0.5) * 60 + "px");
+      container.appendChild(juice);
+      setTimeout(() => juice.remove(), 600);
+    }
+    
+    setTimeout(() => splat.remove(), 600);
+  }, 400);
+  
+  UI.showToast("🍅 你对 " + targetName + " 扔了一个番茄！");
+}
+
+// 大厅模式选择
+function startAIGame() {
+  const nick = getNickname();
+  saveNickname(nick);
+  myNickname = nick;
+  const avatar = window._myAvatar || localStorage.getItem("chuanjian_avatar") || "";
+  if (!socket || !socket.connected) { UI.showToast("正在连接服务器..."); return; }
+  UI.showToast("正在启动...");
+  socket.emit("quick_start_ai", { nickname: nick, avatar }, (res) => {
+    if (!res.success) UI.showToast("启动失败");
+  });
 }
 
 function copyRoomCode() {

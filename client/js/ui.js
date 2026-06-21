@@ -1,4 +1,4 @@
-// 音效系统 - Web Audio API 合成音效
+﻿// 音效系统 - Web Audio API 合成音效
 const Sound = {
   _ctx: null,
   _enabled: true,
@@ -7,14 +7,9 @@ const Sound = {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (AC) this._ctx = new AC();
     }
-    if (this._ctx && this._ctx.state === 'suspended') {
-      this._ctx.resume();
-    }
+    if (this._ctx && this._ctx.state === 'suspended') this._ctx.resume();
   },
-  toggle() {
-    this._enabled = !this._enabled;
-    return this._enabled;
-  },
+  toggle() { this._enabled = !this._enabled; return this._enabled; },
   play(type) {
     if (!this._enabled) return;
     try {
@@ -30,9 +25,11 @@ const Sound = {
         case 'pass': this._beep(350, 0.06); break;
         case 'callCard': this._beep(520, 0.18); break;
         case 'bomb': this._sweep(200, 1500, 0.6); break;
+        case 'sword': this._sweep(300, 1800, 0.5); break;
+        case 'thunder': this._sweep(100, 600, 0.7); break;
         case 'finish': this._sweep(600, 1000, 0.3); break;
       }
-    } catch (e) { /* 静默失败 */ }
+    } catch (e) {}
   },
   _beep(freq, dur, count, gap) {
     count = count || 1; gap = gap || dur;
@@ -62,93 +59,271 @@ const Sound = {
   }
 };
 
+// 国风背景色盘
+const GUOFENG_BG = [
+  'linear-gradient(135deg, #d4a373, #bc8f4f)',
+  'linear-gradient(135deg, #8cb3a0, #6b9a85)',
+  'linear-gradient(135deg, #c2956e, #a87a54)',
+  'linear-gradient(135deg, #9b8d7a, #7d6f5c)',
+  'linear-gradient(135deg, #b8856a, #9e6d52)',
+  'linear-gradient(135deg, #7a9b8f, #5e8074)',
+  'linear-gradient(135deg, #c9a84c, #a88630)',
+  'linear-gradient(135deg, #8b7d6b, #6d5f4d)',
+  'linear-gradient(135deg, #a07a6a, #81614f)',
+  'linear-gradient(135deg, #6d8c7a, #54705e)',
+  'linear-gradient(135deg, #b8966a, #9a7850)',
+  'linear-gradient(135deg, #8c7a6a, #6e5c4c)',
+];
+
+// 随机生成 AI emoji 头像
+function getRandomEmoji() {
+  const emojis = ['🐉', '🦅', '🐯', '🐴', '🐍', '🦉', '🐺', '🦊', '🐲', '🐎', '🦢', '🦩', '🐈', '🦌', '🐇', '🐻', '🐼', '🐸', '🦋', '🐢', '🦎', '🐳', '🦈', '🐙'];
+  return emojis[Math.floor(Math.random() * emojis.length)];
+}
+
+function getBgColor(index) {
+  return GUOFENG_BG[index % GUOFENG_BG.length];
+}
+
 // UI 工具函数
 const UI = {
   _toastTimer: null,
 
   showToast(msg, duration) {
-    const el = document.getElementById("toast");
+    const el = document.getElementById('toast');
     el.textContent = msg;
-    el.classList.remove("hidden");
+    el.classList.remove('hidden');
     clearTimeout(this._toastTimer);
-    this._toastTimer = setTimeout(() => el.classList.add("hidden"), duration || 2000);
+    this._toastTimer = setTimeout(() => el.classList.add('hidden'), duration || 2000);
   },
 
   showPage(pageId) {
-    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const page = document.getElementById(pageId);
-    if (page) page.classList.add("active");
+    if (page) page.classList.add('active');
   },
 
-  showOverlay(id) {
-    document.getElementById(id).classList.remove("hidden");
-  },
-
-  hideOverlay(id) {
-    document.getElementById(id).classList.add("hidden");
-  },
+  showOverlay(id) { document.getElementById(id).classList.remove('hidden'); },
+  hideOverlay(id) { document.getElementById(id).classList.add('hidden'); },
 
   showConfirm(title, text, onConfirm) {
-    document.getElementById("confirm-title").textContent = title;
-    document.getElementById("confirm-text").textContent = text;
-    document.getElementById("confirm-yes").onclick = () => {
-      UI.hideOverlay("confirm-overlay");
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-text').textContent = text;
+    document.getElementById('confirm-yes').onclick = () => {
+      UI.hideOverlay('confirm-overlay');
       if (onConfirm) onConfirm();
     };
-    this.showOverlay("confirm-overlay");
+    this.showOverlay('confirm-overlay');
   },
 
-  SUIT_SYMBOLS: { S: "♠", H: "♥", C: "♣", D: "♦" },
-  SUIT_COLORS: { S: "black", H: "red", C: "black", D: "red" },
-  SUIT_NAMES: { S: "黑桃", H: "红心", C: "梅花", D: "方块" },
+  SUIT_SYMBOLS: { S: '♠', H: '♥', C: '♣', D: '♦' },
+  SUIT_CHINESE: { S: '黑桃', H: '红心', C: '梅花', D: '方块' },
+  SUIT_COLORS: { S: 'black', H: 'red', C: 'black', D: 'red' },
 
-  RANK_NAMES: { "3": "3", "2": "2", "A": "A", "K": "K", "Q": "Q", "J": "J", "10": "10", "9": "9", "8": "8", "7": "7", "6": "6", "5": "5", "4": "4" },
+  RANK_NAMES: { '3': '3', '2': '2', 'A': 'A', 'K': 'K', 'Q': 'Q', 'J': 'J', '10': '10', '9': '9', '8': '8', '7': '7', '6': '6', '5': '5', '4': '4' },
 
   formatCard(card) {
-    if (!card) return "";
+    if (!card) return '';
     const suit = card.suit || card.id?.[0];
     const rank = card.rank || card.id?.slice(1);
-    return { suit, rank, symbol: this.SUIT_SYMBOLS[suit] || "", color: this.SUIT_COLORS[suit] || "black", display: `${this.SUIT_SYMBOLS[suit] || ""}${rank}` };
+    return { suit, rank, symbol: this.SUIT_SYMBOLS[suit] || '', chinese: this.SUIT_CHINESE[suit] || '', color: this.SUIT_COLORS[suit] || 'black', display: `${this.SUIT_SYMBOLS[suit] || ''}${rank}` };
   },
 
   renderCardElement(card, small) {
     const f = this.formatCard(card);
-    const el = document.createElement("div");
+    const el = document.createElement('div');
     el.className = `play-card ${f.color}`;
     el.textContent = f.display;
-    if (small) el.style.fontSize = "0.7rem";
+    if (small) el.style.fontSize = '0.7rem';
     return el;
   },
 
   renderHandCard(card) {
     const f = this.formatCard(card);
-    const el = document.createElement("div");
+    const el = document.createElement('div');
     el.className = `hand-card ${f.color}`;
     el.dataset.cardId = card.id;
-    const rankSpan = document.createElement("div");
-    rankSpan.className = "card-rank";
+    const rankSpan = document.createElement('div');
+    rankSpan.className = 'card-rank';
     rankSpan.textContent = f.rank;
-    const suitSpan = document.createElement("div");
-    suitSpan.className = "card-suit";
+    const suitSpan = document.createElement('div');
+    suitSpan.className = 'card-suit';
     suitSpan.textContent = f.symbol;
+    const chineseSpan = document.createElement('div');
+    chineseSpan.className = 'card-suit-chinese';
+    chineseSpan.textContent = f.chinese;
     el.appendChild(rankSpan);
     el.appendChild(suitSpan);
+    el.appendChild(chineseSpan);
     return el;
   },
 
   HANDS: {
-    single: "单张",
-    pair: "对子",
-    straight: "顺子",
-    consecutive_pairs: "连对",
-    sword_44a: "剑（44A）",
-    small_thunder: "小雷（666）",
-    big_thunder: "大雷（QQQ）",
-    bomb: "炸弹",
-    invalid: "无效"
+    single: '单张',
+    pair: '对子',
+    straight: '顺子',
+    consecutive_pairs: '连对',
+    sword_44a: '剑·44A',
+    small_thunder: '小雷·666',
+    big_thunder: '大雷·QQQ',
+    bomb: '炸弹',
+    invalid: '无效'
   },
 
   getHandName(type) {
-    return this.HANDS[type] || type;
+    return this.HANDS[type] || type || '';
+  },
+
+  // Special effects
+  playEffect(type) {
+    switch (type) {
+      case 'sword_44a': this.effectSword(); break;
+      case 'small_thunder': this.effectThunder('small'); break;
+      case 'big_thunder': this.effectThunder('big'); break;
+      case 'bomb': this.effectBomb(); break;
+    }
+  },
+
+  // 剑特效
+  effectSword() {
+    Sound.play('sword');
+    const el = document.createElement('div');
+    el.className = 'effect-sword';
+    el.innerHTML = `
+      <div class="sword-blade">🗡️</div>
+      <div class="crack"></div>
+      <div class="sword-text">剑·穿云</div>
+    `;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1200);
+  },
+
+  // 雷特效
+  effectThunder(size) {
+    Sound.play('thunder');
+    const el = document.createElement('div');
+    el.className = `effect-thunder ${size === 'small' ? 'small-thunder' : 'big-thunder'}`;
+    el.innerHTML = `
+      <div class="thunder-flash">⚡</div>
+      <div class="thunder-text">${size === 'small' ? '小雷·天劫' : '大雷·天怒'}</div>
+    `;
+    document.body.appendChild(el);
+    document.body.style.animation = 'shake 0.5s ease-out';
+    setTimeout(() => {
+      el.remove();
+      document.body.style.animation = '';
+    }, size === 'small' ? 1000 : 1400);
+  },
+
+  // 炸弹特效
+  effectBomb() {
+    Sound.play('bomb');
+    const el = document.createElement('div');
+    el.className = 'effect-bomb';
+    let particles = '';
+    for (let i = 0; i < 12; i++) {
+      particles += '<div class="bomb-particle"></div>';
+    }
+    el.innerHTML = `
+      <div class="bomb-core">💥</div>
+      ${particles}
+      <div class="bomb-text">炸·破军</div>
+    `;
+    document.body.appendChild(el);
+    document.body.style.animation = 'shake 0.6s ease-out';
+    setTimeout(() => {
+      el.remove();
+      document.body.style.animation = '';
+    }, 1200);
+  },
+
+  // 队友揭示动画
+  showTeammateSeal(avatarEl, caller) {
+    // Add golden border glow
+    avatarEl.classList.add('teammate-revealed');
+    
+    // Create seal stamp element
+    const seal = document.createElement('div');
+    seal.className = 'avatar-seal active';
+    seal.textContent = '剑盟';
+    
+    // Remove existing seal and add new one
+    const oldSeal = avatarEl.querySelector('.avatar-seal');
+    if (oldSeal) oldSeal.remove();
+    avatarEl.appendChild(seal);
+    
+    // Show overlay with seal
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    overlay.style.zIndex = '300';
+    overlay.innerHTML = `
+      <div class="overlay-content teammate-content">
+        <div class="teammate-seal">剑盟</div>
+        <div class="teammate-reveal-text">盟友已现 · ${caller}</div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    Sound.play('teammate');
+    setTimeout(() => overlay.remove(), 2500);
+  },
+
+  // 发牌动画
+  dealAnimation(hands, callback) {
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const seatPositions = this._getSeatPositions();
+    
+    let delay = 0;
+    let totalCards = 0;
+    hands.forEach(h => { totalCards += h.length; });
+    
+    hands.forEach((hand, playerIdx) => {
+      hand.forEach((card, cardIdx) => {
+        setTimeout(() => {
+          const el = document.createElement('div');
+          el.className = 'dealing-card';
+          
+          const toPos = seatPositions[playerIdx];
+          const cardOffset = (cardIdx - (hand.length - 1) / 2) * 8;
+          
+          el.style.left = (centerX - 24) + 'px';
+          el.style.top = (centerY - 35) + 'px';
+          el.style.setProperty('--from-x', '0px');
+          el.style.setProperty('--from-y', '0px');
+          el.style.setProperty('--to-x', (toPos.x - centerX + cardOffset) + 'px');
+          el.style.setProperty('--to-y', (toPos.y - centerY) + 'px');
+          el.style.setProperty('--rotate-end', (Math.random() - 0.5) * 20 + 'deg');
+          el.style.setProperty('--fly-duration', '0.18s');
+          
+          document.body.appendChild(el);
+          
+          setTimeout(() => el.remove(), 200);
+          
+          if (cardIdx === hand.length - 1 && playerIdx === hands.length - 1) {
+            // All cards dealt: trigger callback after last card lands
+          }
+        }, delay);
+        delay += 150; // 0.15s per card
+      });
+      delay += 50; // 0.05s pause between players
+    });
+    
+    // Wait for all cards and callback
+    setTimeout(() => {
+      if (callback) callback();
+    }, delay + 300);
+  },
+
+  _getSeatPositions() {
+    // Returns center-relative positions for each seat
+    // 0=bottom(player), 1=right, 2=top, 3=left
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    return [
+      { x: w / 2, y: h - 100 },           // bottom
+      { x: w - 80, y: h / 2 + 40 },       // right
+      { x: w / 2, y: 60 },                 // top
+      { x: 80, y: h / 2 + 40 },            // left
+    ];
   }
 };

@@ -1,4 +1,4 @@
-// 牌的花色和点数定义
+﻿// 牌的花色和点数定义
 const SUITS = ['S', 'H', 'C', 'D']; // Spade, Heart, Club, Diamond
 const SUIT_NAMES = { S: '♠', H: '♥', C: '♣', D: '♦' };
 const SUIT_ORDER = { S: 4, H: 3, C: 2, D: 1 };
@@ -13,6 +13,12 @@ const RANK_ORDER = {
 const STRAIGHT_VALUES = {
   '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
   '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14
+};
+
+// 连对用的连续范围（4～3，含 A-2-3 连接）
+const PAIR_STRAIGHT_VALUES = {
+  '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+  '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14, '2': 15, '3': 16
 };
 
 function createCard(suit, rank) {
@@ -86,7 +92,7 @@ function cardsDisplay(cards) {
 }
 
 module.exports = {
-  SUITS, SUIT_NAMES, SUIT_ORDER, RANK_ORDER, STRAIGHT_VALUES,
+  SUITS, SUIT_NAMES, SUIT_ORDER, RANK_ORDER, STRAIGHT_VALUES, PAIR_STRAIGHT_VALUES,
   createCard, createDeck, shuffle, dealCards, sortCards,
   findCardIndex, removeCards, cardDisplay, cardsDisplay
-};
+};;

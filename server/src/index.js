@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
@@ -99,6 +99,64 @@ io.on('connection', (socket) => {
     if (callback) callback({ success: true, roomCode });
   });
 
+  // 快速人机对战
+  socket.on('quick_start_ai', (data, callback) => {
+    const nickname = (data && data.nickname) || '玩家';
+    const avatar = (data && data.avatar) || '';
+    currentNickname = nickname;
+    const createRes = roomManager.createRoom(socket.id, nickname, avatar);
+    if (!createRes || !createRes.roomCode) {
+      if (callback) callback({ success: false });
+      return;
+    }
+    const roomCode = createRes.roomCode;
+    socket.join(roomCode);
+    roomManager.addBot(roomCode);
+    roomManager.addBot(roomCode);
+    roomManager.addBot(roomCode);
+    const room = roomManager.getRoom(roomCode);
+    if (!room) { if (callback) callback({ success: false }); return; }
+    room.botDifficulty = 'easy';
+    const game = new (require("./game/gameManager").GameManager)(roomCode);
+    const startResult = game.start(room.players.map(p => ({
+      socketId: p.socketId, nickname: p.nickname, avatar: p.avatar || '', isBot: p.isBot || false,
+    })));
+    room.game = game;
+    room.isPlaying = true;
+    broadcastRoomUpdate(roomCode);
+    io.to(roomCode).emit('game_start', { phase: 'call', declarerIndex: startResult.declarerIndex, declarerNickname: startResult.declarerNickname, playerCount: 4, isQuickAI: true });
+    // Delay game_state to let dealing animation play
+    setTimeout(() => {
+      const cr2 = roomManager.getRoom(roomCode);
+      if (!cr2 || !cr2.game) return;
+      cr2.players.forEach((p, i) => {
+        io.to(p.socketId).emit('game_state', Object.assign(cr2.game.getGameState(i), { cumulativeScores: cr2.scores || [0,0,0,0] }));
+      });
+      // Bot declarer auto-calls after hands are dealt
+      const declarer = cr2.players[startResult.declarerIndex];
+      if (declarer && declarer.isBot) {
+        setTimeout(() => {
+          const cr3 = roomManager.getRoom(roomCode);
+          if (!cr3 || !cr3.game || cr3.game.phase !== 'call') return;
+          const hand = cr3.game.getPlayerHand(startResult.declarerIndex);
+          const cardId = botCallCard(hand, 'easy');
+          const callRes = cr3.game.callCard(startResult.declarerIndex, cardId);
+          if (callRes.success) {
+            io.to(roomCode).emit('card_called', { calledCard: callRes.calledCard, declarerIndex: cr3.game.declarerIndex });
+            cr3.players.forEach(p => { if (!p.isBot) io.to(p.socketId).emit('game_state', Object.assign(cr3.game.getGameState(p.index), { cumulativeScores: cr3.scores || [0,0,0,0] })); });
+            const np = cr3.players[callRes.currentTurn];
+            if (np && !np.isBot) io.to(np.socketId).emit('your_turn', { lastPlay: null, isNewRound: true });
+            scheduleBotTurn(roomCode);
+          }
+        }, 1500);
+      } else {
+        scheduleBotTurn(roomCode);
+      }
+    }, 1500);
+    if (callback) callback({ success: true, roomCode });
+  });
+
+
   // 添加机器人
   socket.on('add_bot', (data, callback) => {
     const roomCode = roomManager.getRoomCode(socket.id);
@@ -187,7 +245,7 @@ io.on('connection', (socket) => {
           const cr = roomManager.getRoom(roomCode);
           if (!cr || !cr.game || cr.game.phase !== 'call') return;
           const hand = game.getPlayerHand(result.gameInfo.declarerIndex);
-          const cardId = botCallCard(hand);
+          const cardId = botCallCard(hand, (roomManager.getRoom(roomCode) || {}).botDifficulty || 'easy');
           const callRes = game.callCard(result.gameInfo.declarerIndex, cardId);
           if (callRes.success) {
             io.to(roomCode).emit('card_called', {
@@ -354,6 +412,39 @@ io.on('connection', (socket) => {
   });
 
   // 断线重连
+  // 重新开始游戏
+  socket.on('restart_game', (data, callback) => {
+    const roomCode = roomManager.getRoomCode(socket.id);
+    if (!roomCode) { if (callback) callback({ success: false }); return; }
+    const room = roomManager.getRoom(roomCode);
+    if (!room) { if (callback) callback({ success: false }); return; }
+    const result = roomManager.restartGame(socket.id);
+    if (result.success) {
+      io.to(roomCode).emit('game_start', { phase: 'call', declarerIndex: result.gameInfo.declarerIndex, declarerNickname: result.gameInfo.declarerNickname, playerCount: 4 });
+      const declarerSocketId = room.players[result.gameInfo.declarerIndex].socketId;
+      io.to(declarerSocketId).emit('your_turn_call', { myHand: room.game.getPlayerHand(result.gameInfo.declarerIndex), canCallAny: true });
+      room.players.forEach((p, i) => { io.to(p.socketId).emit('game_state', Object.assign(room.game.getGameState(i), { cumulativeScores: room.scores || [0,0,0,0] })); });
+      const declarer = room.players[result.gameInfo.declarerIndex];
+      if (declarer && declarer.isBot) {
+        setTimeout(() => {
+          const cr = roomManager.getRoom(result.roomCode);
+          if (!cr || !cr.game || cr.game.phase !== 'call') return;
+          const hand = cr.game.getPlayerHand(result.gameInfo.declarerIndex);
+          const cardId = botCallCard(hand, cr.botDifficulty || 'easy');
+          const callRes = cr.game.callCard(result.gameInfo.declarerIndex, cardId);
+          if (callRes.success) {
+            io.to(result.roomCode).emit('card_called', { calledCard: callRes.calledCard, declarerIndex: cr.game.declarerIndex });
+            cr.players.forEach(p => { if (!p.isBot) io.to(p.socketId).emit('game_state', Object.assign(cr.game.getGameState(p.index), { cumulativeScores: cr.scores || [0,0,0,0] })); });
+            const np = cr.players[callRes.currentTurn];
+            if (np && !np.isBot) io.to(np.socketId).emit('your_turn', { lastPlay: null, isNewRound: true });
+            scheduleBotTurn(result.roomCode);
+          }
+        }, 1500);
+      } else { scheduleBotTurn(result.roomCode); }
+    }
+    if (callback) callback(result);
+  });
+
   socket.on('get_game_state', (data, callback) => {
     const roomCode = roomManager.getRoomCode(socket.id);
     if (!roomCode) { if (callback) callback({ success: false, reason: '不在房间中' }); return; }
@@ -427,7 +518,7 @@ function scheduleBotTurn(roomCode) {
       if (!declarer || !declarer.isBot) return;
       // Bot declarer calls a card
       const hand = cr.game.getPlayerHand(cr.game.declarerIndex);
-      const cardId = botCallCard(hand);
+      const cardId = botCallCard(hand, (roomManager.getRoom(roomCode) || {}).botDifficulty || 'easy');
       const res = cr.game.callCard(cr.game.declarerIndex, cardId);
       if (res.success) {
         io.to(roomCode).emit("card_called", { calledCard: res.calledCard, declarerIndex: cr.game.declarerIndex });
@@ -442,7 +533,7 @@ function scheduleBotTurn(roomCode) {
       const bp = cr.players[cr.game.currentTurnIndex];
       if (!bp || !bp.isBot) return;
       const hand = cr.game.getPlayerHand(cr.game.currentTurnIndex);
-      const dec = botPlayCards(hand, cr.game.lastPlay);
+      const dec = botPlayCards(hand, cr.game.lastPlay, (roomManager.getRoom(roomCode) || {}).botDifficulty || 'easy');
 
       if (dec.action === "play") {
         const res = cr.game.playCards(cr.game.currentTurnIndex, dec.cardIds);

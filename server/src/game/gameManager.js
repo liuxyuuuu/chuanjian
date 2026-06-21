@@ -1,4 +1,4 @@
-const { v4: uuidv4 } = require('uuid');
+﻿const { v4: uuidv4 } = require('uuid');
 const { dealCards, sortCards, removeCards, cardDisplay, RANK_ORDER } = require('./deck');
 const { analyzeHand, canBeat, HAND_TYPE } = require('./rules');
 
@@ -26,6 +26,7 @@ class GameManager {
     this.lastActiveIndex = -1;
     this.lastPlays = [null, null, null, null];
     this.finishOrder = [];
+    this.bombCount = 0;
     this.seats = [];
   }
 
@@ -69,6 +70,8 @@ class GameManager {
     for (const id of cardIds) { if (!handIds.has(id)) return { success: false, reason: '没有牌 ' + id }; }
     const cards = cardIds.map(id => player.hand.find(c => c.id === id));
     const handAnalysis = analyzeHand(cards);
+    // Track bombs for multiplier
+    if (handAnalysis.type === 'bomb') this.bombCount++;
     if (handAnalysis.type === HAND_TYPE.INVALID) return { success: false, reason: '无效牌型' };
     if (this.lastPlay && !canBeat(handAnalysis, this.lastPlay.handAnalysis)) return { success: false, reason: '管不上' };
     let teammateJustRevealed = false;
@@ -147,12 +150,13 @@ class GameManager {
     else if (t2b === 1 && t2w === 2) { s2 = 4; s1 = -4; }
     else if (t2b === 1 && t2w === 3) { s2 = 2; s1 = -2; }
     else if (t2b === 1 && t2w === 4) { s2 = 0; s1 = 0; }
+    const multiplier = Math.pow(2, this.bombCount);
     const perPlayerScores = {};
     this.finishOrder.forEach(pIdx => {
       const isTeam1 = team1.includes(pIdx);
-      perPlayerScores[pIdx] = (isTeam1 ? s1 : s2) / 2;
+      perPlayerScores[pIdx] = ((isTeam1 ? s1 : s2) / 2) * multiplier;
     });
-    return { finishOrder: [...this.finishOrder], team1, team2, team1Score: s1, team2Score: s2, perPlayerScores, details: this.finishOrder.map((pIdx, pos) => ({ position: pos + 1, nickname: this.players[pIdx].nickname, isDeclarer: pIdx === this.declarerIndex, isTeammate: pIdx === this.teammateIndex, score: perPlayerScores[pIdx] })) };
+    return { finishOrder: [...this.finishOrder], team1, team2, team1Score: s1 * multiplier, team2Score: s2 * multiplier, bombCount: this.bombCount, multiplier, perPlayerScores, details: this.finishOrder.map((pIdx, pos) => ({ position: pos + 1, nickname: this.players[pIdx].nickname, isDeclarer: pIdx === this.declarerIndex, isTeammate: pIdx === this.teammateIndex, score: (perPlayerScores[pIdx] / multiplier), bombMultiplier: multiplier })) };
   }
 
   getPlayerHand(playerIndex) { return this.players[playerIndex].hand; }
@@ -173,6 +177,7 @@ class GameManager {
       teammateRevealed: this.teammateRevealed,
       lastPlays: this.lastPlays.map(lp => lp ? { cards: lp.cards, handAnalysis: lp.handAnalysis } : null),
       calledCard: this.calledCardId,
+      bombCount: this.bombCount,
       finishOrder: this.finishOrder.length > 0 ? [...this.finishOrder] : null,
       myHand: forPlayerIndex >= 0 ? this.players[forPlayerIndex].hand : [],
       myIndex: forPlayerIndex >= 0 ? forPlayerIndex : -1,

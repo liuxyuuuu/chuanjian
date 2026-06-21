@@ -1,9 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>穿剑 - 棋牌游戏</title>
+  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <title>穿剑 - 四人国风棋牌</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -12,7 +13,7 @@
     <div class="lobby-container">
       <div class="game-title">
         <h1>穿剑</h1>
-        <p class="subtitle">四人棋牌 · 谁是队友</p>
+        <p class="subtitle">四人暗牌 · 剑出盟现</p>
       <button class="btn rules-btn small ghost" onclick="toggleRules()">📖 规则</button>
       </div>
       
@@ -34,14 +35,25 @@
           <input type="text" id="nickname-input" maxlength="8" placeholder="输入昵称" value="">
         </div>
         
-        <div class="lobby-actions">
-          <button id="create-room-btn" class="btn primary" onclick="createRoom()">创建房间</button>
-          <div class="divider"><span>或</span></div>
-          <div class="join-row">
-            <input type="text" id="room-code-input" maxlength="6" placeholder="输入房间号" oninput="this.value=this.value.toUpperCase()">
-            <button id="join-room-btn" class="btn secondary" onclick="joinRoom()">加入</button>
-          </div>
+        <div class="mode-select" id="mode-select">
+        <button class="mode-btn" onclick="startAIGame()">
+          <span class="mode-icon">🤖</span>
+          <span class="mode-label">人机对战</span>
+        </button>
+        <button class="mode-btn" onclick="startPVPGame()">
+          <span class="mode-icon">👥</span>
+          <span class="mode-label">玩家对战</span>
+        </button>
+      </div>
+      <div class="lobby-actions hidden" id="pvp-actions">
+        <div class="join-row">
+          <input type="text" id="room-code-input" maxlength="6" placeholder="输入房间号" oninput="this.value=this.value.toUpperCase()">
+          <button id="join-room-btn" class="btn secondary" onclick="joinRoom()">加入</button>
         </div>
+        <div class="divider"><span>或</span></div>
+        <button id="create-room-btn" class="btn primary" onclick="createRoom()">创建房间</button>
+        <button class="btn outline small" onclick="backToModes()">返回</button>
+      </div>
       </div>
     </div>
   </div>
@@ -100,6 +112,7 @@
         <!-- 对家（上家） -->
         <div class="player-seat top" id="player-top">
           <div class="player-info">
+            <span class="player-avatar"></span>
             <span class="player-name"></span>
             <span class="player-card-count"></span>
           </div>
@@ -112,6 +125,7 @@
           <!-- 左家 -->
           <div class="player-seat left" id="player-left">
             <div class="player-info">
+              <span class="player-avatar"></span>
               <span class="player-name"></span>
               <span class="player-card-count"></span>
             </div>
@@ -128,6 +142,7 @@
           <!-- 右家 -->
           <div class="player-seat right" id="player-right">
             <div class="player-info">
+              <span class="player-avatar"></span>
               <span class="player-name"></span>
               <span class="player-card-count"></span>
             </div>
@@ -139,6 +154,7 @@
         <!-- 自己（下手） -->
         <div class="player-seat bottom" id="player-bottom">
           <div class="player-info">
+            <span class="player-avatar"></span>
             <span class="player-name"></span>
             <span class="player-card-count"></span>
           </div>
@@ -184,6 +200,7 @@
 
   <!-- ===== Toast 提示 ===== -->
   <div id="toast" class="toast hidden"></div>
+  <div id="tomato-container" class="tomato-container"></div>
 
   <!-- ===== 确认弹窗 ===== -->
   <div id="confirm-overlay" class="overlay hidden">
