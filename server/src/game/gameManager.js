@@ -1,5 +1,5 @@
 const { v4: uuidv4 } = require('uuid');
-const { dealCards, devDealCards, sortCards, removeCards, cardDisplay, RANK_ORDER } = require('./deck');
+const { dealCards, sortCards, removeCards, cardDisplay, RANK_ORDER } = require('./deck');
 const { analyzeHand, canBeat, HAND_TYPE } = require('./rules');
 
 const PHASE = {
@@ -153,18 +153,6 @@ class GameManager {
       perPlayerScores[pIdx] = (isTeam1 ? s1 : s2) / 2;
     });
     return { finishOrder: [...this.finishOrder], team1, team2, team1Score: s1, team2Score: s2, perPlayerScores, details: this.finishOrder.map((pIdx, pos) => ({ position: pos + 1, nickname: this.players[pIdx].nickname, isDeclarer: pIdx === this.declarerIndex, isTeammate: pIdx === this.teammateIndex, score: perPlayerScores[pIdx] })) };
-  }
-
-  // 开发者模式：给玩家0发剑+雷+炸
-  startDevMode(players) {
-    if (players.length !== 4) return false;
-    this.players = players.map(p => ({ ...p, hand: [], finished: false, finishPosition: -1 }));
-    const hands = devDealCards();
-    this.players.forEach((p, i) => { p.hand = sortCards(hands[i]); });
-    this.declarerIndex = 0;
-    this.seats = [0, 1, 2, 3].map(i => (this.declarerIndex + i) % 4);
-    this.phase = PHASE.CALL;
-    return { gameId: this.id, declarerIndex: this.declarerIndex, declarerNickname: this.players[0].nickname, phase: PHASE.CALL };
   }
 
   getPlayerHand(playerIndex) { return this.players[playerIndex].hand; }

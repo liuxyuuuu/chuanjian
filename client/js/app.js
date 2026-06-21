@@ -352,32 +352,6 @@ function toggleRules() {
   const overlay = document.getElementById("rules-overlay");
   overlay.classList.toggle("hidden");
 }
-function startDevMode() {
-  const nick = getNickname();
-  saveNickname(nick);
-  myNickname = nick;
-  if (!socket) { UI.showToast("连接失败"); return; }
-  if (!socket.connected) {
-    UI.showToast("等待连接...");
-    socket.once("connect", () => {
-      UI.showToast("进入开发者模式...");
-      socket.emit("dev_mode", { nickname: nick, avatar: window._myAvatar || "" }, (res) => {
-        if (res && res.success) { myPlayerIndex = 0; }
-        else { UI.showToast((res && res.reason) || "进入开发者模式失败"); }
-      });
-    });
-    setTimeout(() => {
-      if (!socket.connected) UI.showToast("连接超时，请刷新页面");
-    }, 5000);
-    return;
-  }
-  UI.showToast("进入开发者模式...");
-  socket.emit("dev_mode", { nickname: nick, avatar: window._myAvatar || "" }, (res) => {
-    if (res && res.success) { myPlayerIndex = 0; }
-    else { UI.showToast((res && res.reason) || "进入开发者模式失败"); }
-  });
-}
-
 function closeRules() {
   document.getElementById("rules-overlay").classList.add("hidden");
 }
