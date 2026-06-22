@@ -167,6 +167,15 @@ socket.on('game_start', (data) => {
     const player = GameUI.players[data.playerIndex];
     const name = player ? player.nickname : '玩家';
     Sound.speakEvent('pass');
+    // Show "过" indicator in play area
+    var passEl = document.createElement('div');
+    passEl.textContent = '过';
+    passEl.className = 'pass-indicator';
+    var pc = document.getElementById('play-cards');
+    if (pc) pc.appendChild(passEl);
+    setTimeout(function(){
+      if (passEl.parentNode) passEl.remove();
+    }, 1200);
     if (data.roundReset) {
       UI.showToast(name + ' 过，新回合始');
     } else {
