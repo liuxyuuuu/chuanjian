@@ -2,6 +2,7 @@
 const Sound = {
   _ctx: null,
   _enabled: true,
+  _volume: 0.8,
   _init() {
     if (!this._ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -11,6 +12,7 @@ const Sound = {
   },
   toggle() { this._enabled = !this._enabled; return this._enabled; },
   speechStyle: 'long',
+  setVolume: function(v) { this._volume = Math.max(0, Math.min(1, v)); },
   toggleSpeechStyle() { this.speechStyle = this.speechStyle === 'long' ? 'short' : 'long'; return this.speechStyle; },
   play(type) {
     if (!this._enabled) return;
@@ -42,7 +44,7 @@ const Sound = {
       osc.connect(gain); gain.connect(this._ctx.destination);
       osc.frequency.value = freq;
       osc.type = 'sine';
-      gain.gain.setValueAtTime(0.13, t);
+      gain.gain.setValueAtTime(0.13 * this._volume, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
       osc.start(t); osc.stop(t + dur + 0.02);
     }
@@ -57,6 +59,7 @@ const Sound = {
     u.lang = 'zh-CN';
     u.rate = opts.rate || 1.0;
     u.pitch = opts.pitch || 0.9;
+    u.volume = this._volume;
     var voices = window.speechSynthesis.getVoices();
     var zh = voices.find(function(v){ return v.lang.startsWith('zh'); });
     if (zh) u.voice = zh;
@@ -154,7 +157,7 @@ const Sound = {
     osc.frequency.setValueAtTime(f0, t);
     osc.frequency.exponentialRampToValueAtTime(f1, t + dur);
     osc.type = 'sine';
-    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.setValueAtTime(0.12 * this._volume, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
     osc.start(); osc.stop(t + dur + 0.03);
   }

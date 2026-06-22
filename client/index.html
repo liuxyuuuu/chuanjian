@@ -105,6 +105,7 @@
       <div class="game-top-bar">
         <button class="btn small ghost" onclick="confirmLeave()">退出</button>
         <span id="game-status-text" class="game-status">游戏中</span>
+        <button id="settings-btn" class="btn small ghost" onclick="toggleSettings()" style="margin-left:auto;font-size:1.1rem">⚙️</button>
       </div>
       
       <!-- 游戏桌面 -->
@@ -220,6 +221,22 @@
       <div class="landscape-icon">↻</div>
       <p>请将手机横屏</p>
       <p class="landscape-sub">横向显示效果更佳</p>
+    </div>
+  </div>
+
+  <!-- ===== Settings ===== -->
+  <div id="settings-overlay" class="overlay hidden">
+    <div class="overlay-content settings-content">
+      <h3>设置</h3>
+      <div class="setting-row">
+        <span class="setting-label">🔊 音量</span>
+        <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="setVolume(this.value/100)">
+      </div>
+      <div class="setting-row">
+        <span class="setting-label">📐 屏幕方向</span>
+        <button id="orient-btn" class="btn small outline" onclick="toggleOrientation()">横屏</button>
+      </div>
+      <button class="btn primary" onclick="closeSettings()" style="margin-top:10px">关闭</button>
     </div>
   </div>
 

@@ -328,6 +328,45 @@ function cancelMatch() {
   socket.emit("cancel_match");
 }
 
+
+// Settings
+
+function toggleSettings() {
+  var el = document.getElementById('settings-overlay');
+  el.classList.toggle('hidden');
+  // Init slider value
+  var slider = document.getElementById('volume-slider');
+  if (slider && Sound._volume !== undefined) slider.value = Sound._volume * 100;
+}
+function closeSettings() { document.getElementById('settings-overlay').classList.add('hidden'); }
+function setVolume(val) {
+  if (Sound.setVolume) Sound.setVolume(val);
+  localStorage.setItem('chuanjian_volume', val);
+}
+function toggleOrientation() {
+  var btn = document.getElementById('orient-btn');
+  var current = localStorage.getItem('chuanjian_orient') || 'landscape';
+  var next = current === 'landscape' ? 'portrait' : 'landscape';
+  localStorage.setItem('chuanjian_orient', next);
+  btn.textContent = next === 'landscape' ? '横屏' : '竖屏';
+  if (next === 'landscape') {
+    lockLandscape();
+  } else if (screen.orientation && screen.orientation.unlock) {
+    screen.orientation.unlock();
+  }
+}
+
+// Init volume from localStorage
+(function(){
+  var savedVol = parseFloat(localStorage.getItem('chuanjian_volume'));
+  if (!isNaN(savedVol) && Sound.setVolume) Sound.setVolume(savedVol);
+  var savedOrient = localStorage.getItem('chuanjian_orient');
+  if (savedOrient) {
+    var btn = document.getElementById('orient-btn');
+    if (btn) btn.textContent = savedOrient === 'landscape' ? '横屏' : '竖屏';
+  }
+})();
+
 function lockLandscape() {
   var el = document.documentElement;
   if (el.requestFullscreen) {
