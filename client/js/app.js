@@ -345,15 +345,23 @@ function setVolume(val) {
 }
 function toggleOrientation() {
   var btn = document.getElementById('orient-btn');
-  var current = localStorage.getItem('chuanjian_orient') || 'landscape';
-  var next = current === 'landscape' ? 'portrait' : 'landscape';
-  localStorage.setItem('chuanjian_orient', next);
-  btn.textContent = next === 'landscape' ? '横屏' : '竖屏';
-  if (next === 'landscape') {
-    lockLandscape();
-  } else if (screen.orientation && screen.orientation.unlock) {
-    screen.orientation.unlock();
+  var isLandscape = screen.orientation ? screen.orientation.type.startsWith('landscape') : false;
+  var wantLandscape = !isLandscape;
+  if (wantLandscape) {
+    var el = document.documentElement;
+    if (el.requestFullscreen) el.requestFullscreen().catch(function(){});
+    if (screen.orientation && screen.orientation.lock) {
+      screen.orientation.lock('landscape').catch(function(){});
+    }
+    localStorage.setItem('chuanjian_orient', 'landscape');
+    btn.textContent = '横屏';
+  } else {
+    if (document.fullscreenElement) document.exitFullscreen().catch(function(){});
+    if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+    localStorage.setItem('chuanjian_orient', 'portrait');
+    btn.textContent = '竖屏';
   }
+  UI.showToast(wantLandscape ? '横屏模式' : '竖屏模式');
 }
 
 // Init volume from localStorage
@@ -369,13 +377,8 @@ function toggleOrientation() {
 
 function lockLandscape() {
   var el = document.documentElement;
-  if (el.requestFullscreen) {
-    el.requestFullscreen().then(function(){
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock('landscape').catch(function(){});
-      }
-    }).catch(function(){});
-  } else if (screen.orientation && screen.orientation.lock) {
+  if (el.requestFullscreen) el.requestFullscreen().catch(function(){});
+  if (screen.orientation && screen.orientation.lock) {
     screen.orientation.lock('landscape').catch(function(){});
   }
 }
