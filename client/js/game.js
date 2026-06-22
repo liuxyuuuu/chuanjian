@@ -290,10 +290,8 @@ const GameUI = {
       return (suitOrder[b.suit] || 0) - (suitOrder[a.suit] || 0);
     });
 
-    var overlap = Math.min(38, Math.max(22, ((container.offsetWidth || 320) - 60) / Math.max(sorted.length, 1)));
     sorted.forEach((card, idx) => {
       const el = UI.renderHandCard(card);
-      if (idx > 0) el.style.marginLeft = '-' + overlap + 'px';
       el.style.zIndex = idx;
       if (this.selectedCards.has(card.id)) el.classList.add('selected');
       el.onclick = () => this.toggleCardSelection(card.id);
