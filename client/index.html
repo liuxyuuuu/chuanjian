@@ -102,6 +102,34 @@
         <button id="sound-toggle" class="btn sound-toggle" onclick="toggleSound()">🔊</button>
       </div>
       <!-- 顶部信息栏 -->
+      <!-- Card rememberer (left side) -->
+      <div class="card-rememberer" id="card-rememberer">
+        <div class="rem-card" id="rem-card-0">
+          <div class="rem-inner"><span class="rem-rank">A</span><span class="rem-suit">♥</span></div>
+        </div>
+        <div class="rem-card" id="rem-card-1">
+          <div class="rem-inner"><span class="rem-rank">K</span><span class="rem-suit">♠</span></div>
+        </div>
+        <div class="rem-card" id="rem-card-2">
+          <div class="rem-inner"><span class="rem-rank">Q</span><span class="rem-suit">♦</span></div>
+        </div>
+      </div>
+      <!-- Card counter -->
+      <div class="top-counter" id="top-counter">
+        <span class="counter-title">剩余牌</span>
+        <span class="counter-item"><b>2</b>x4</span>
+        <span class="counter-item"><b>A</b>x4</span>
+        <span class="counter-item"><b>K</b>x4</span>
+        <span class="counter-item"><b>Q</b>x4</span>
+        <span class="counter-item"><b>J</b>x4</span>
+        <span class="counter-item"><b>10</b>x4</span>
+        <span class="counter-item"><b>9</b>x4</span>
+        <span class="counter-item"><b>8</b>x4</span>
+        <span class="counter-item"><b>7</b>x4</span>
+        <span class="counter-item"><b>6</b>x4</span>
+        <span class="counter-item"><b>5</b>x4</span>
+        <span class="counter-item"><b>4</b>x4</span>
+      </div>
       <div class="game-top-bar">
         <button class="btn small ghost" onclick="confirmLeave()">退出</button>
         <span id="game-status-text" class="game-status">游戏中</span>
@@ -173,9 +201,9 @@
       
       <!-- 操作按钮 -->
       <div class="action-bar" id="action-bar">
-        <button id="action-pass" class="btn outline" onclick="passTurn()">过牌</button>
-        <button id="action-play" class="btn primary" onclick="playSelected()">出牌</button>
-        <button id="action-hint" class="btn small ghost" onclick="showHint()">提示</button>
+        <button id="action-pass" class="action-btn btn-pass" onclick="passTurn()">不出</button>
+        <button id="action-play" class="action-btn btn-play" onclick="playSelected()">出牌</button>
+        <button id="action-hint" class="action-btn btn-hint" onclick="showHint()">提示</button>
       </div>
       
       <!-- 叫牌界面 -->

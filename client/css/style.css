@@ -261,7 +261,8 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
   background: linear-gradient(to bottom, #2c241a, #3a3025);
   flex-direction: column;
 }
-.game-container { display: flex; flex-direction: column; height: 100%; width: 100%; position: relative; }
+.game-container {
+  background: radial-gradient(ellipse at center, #1a3a3a 0%, #0d1f1f 40%, #080f0f 100%); display: flex; flex-direction: column; height: 100%; width: 100%; position: relative; }
 
 .game-top-bar {
   display: flex; align-items: center; justify-content: space-between;
@@ -1055,3 +1056,116 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
   70% { opacity: 0.8; }
   100% { opacity: 0; transform: scale(0.8) translateY(-10px); }
 }
+
+/* ===== Card counter ===== */
+#top-counter {
+  display: flex; gap: 2px; padding: 4px 8px;
+  background: rgba(0,0,0,0.3); overflow-x: auto;
+  white-space: nowrap; font-size: 0.65rem;
+  color: rgba(180,220,220,0.5); position: relative; z-index: 10;
+  border-bottom: 1px solid rgba(100,200,200,0.1);
+}
+.counter-title {
+  color: rgba(100,200,200,0.6); margin-right: 6px;
+  font-family: 'ZCOOL XiaoWei',serif; letter-spacing: 1px;
+}
+.counter-item { margin-right: 4px; }
+.counter-item b { color: rgba(180,220,220,0.7); font-weight:600; }
+
+/* ===== Card rememberer (left side) ===== */
+#card-rememberer {
+  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  z-index: 5; pointer-events: none;
+}
+.rem-card {
+  width: 48px; height: 66px; border-radius: 4px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(200,230,230,0.2);
+  position: absolute; backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+#rem-card-0 { transform: rotate(-6deg); left: 0; top: 0; }
+#rem-card-1 { transform: rotate(-2deg); left: 10px; top: 10px; }
+#rem-card-2 { transform: rotate(3deg); left: 20px; top: 20px; }
+.rem-inner { text-align: center; }
+.rem-rank { font-size: 1rem; font-weight: bold; color: rgba(255,255,255,0.5); display:block; }
+.rem-suit { font-size: 0.7rem; color: rgba(255,255,255,0.3); }
+
+/* ===== 3D Action buttons ===== */
+.action-bar {
+  position: relative; z-index: 20;
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; padding: 10px 16px;
+  background: linear-gradient(0deg, rgba(0,0,0,0.6) 0%, transparent 100%);
+}
+.action-btn {
+  border: none; border-radius: 10px;
+  font-size: 0.9rem; font-weight: bold;
+  padding: 10px 24px; min-width: 80px;
+  cursor: pointer; transition: all 0.15s;
+  font-family: 'ZCOOL XiaoWei',serif; letter-spacing: 2px;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.3), 0 6px 12px rgba(0,0,0,0.2);
+  position: relative; top: 0;
+}
+.action-btn:active { top: 3px; box-shadow: 0 1px 0 rgba(0,0,0,0.3); }
+.action-btn:disabled { opacity: 0.3; top: 2px; box-shadow: 0 1px 0 rgba(0,0,0,0.2); cursor:default; }
+.btn-pass {
+  background: linear-gradient(180deg, #4a90d9 0%, #2563a8 100%);
+  color: #fff; text-shadow: 0 -1px 2px rgba(0,0,0,0.3);
+  border: 1px solid rgba(100,180,255,0.3);
+}
+.btn-pass:hover:not(:disabled) {
+  background: linear-gradient(180deg, #5aa0e9 0%, #3573b8 100%);
+}
+.btn-hint {
+  background: linear-gradient(180deg, #e8c84a 0%, #c4a230 100%);
+  color: #3a2e10; text-shadow: 0 1px 2px rgba(255,255,200,0.3);
+  border: 1px solid rgba(200,180,80,0.3);
+  margin-top: -6px;
+}
+.btn-hint:hover:not(:disabled) {
+  background: linear-gradient(180deg, #f0d85a 100%, #d4b240 100%);
+}
+.btn-play {
+  background: linear-gradient(180deg, #e8a030 0%, #c48020 100%);
+  color: #fff; text-shadow: 0 -1px 2px rgba(0,0,0,0.3);
+  border: 1px solid rgba(200,150,60,0.3);
+}
+.btn-play:hover:not(:disabled) {
+  background: linear-gradient(180deg, #f8b040 0%, #d49030 100%);
+}
+
+/* ===== Opponent positioning ===== */
+.player-seat.left {
+  position: absolute !important; left: 10px; top: 20%;
+  width: auto !important; max-width: 120px !important;
+  flex-direction: column; align-items: center;
+  background: rgba(0,0,0,0.25); border-radius: 8px;
+  padding: 8px; border: 1px solid rgba(100,200,200,0.1);
+}
+.player-seat.right {
+  position: absolute !important; right: 10px; top: 20%;
+  width: auto !important; max-width: 120px !important;
+  flex-direction: column; align-items: center;
+  background: rgba(0,0,0,0.25); border-radius: 8px;
+  padding: 8px; border: 1px solid rgba(100,200,200,0.1);
+}
+.player-seat.top {
+  position: absolute !important; left: 50%; top: 8px;
+  transform: translateX(-50%);
+  flex-direction: column; align-items: center;
+  background: rgba(0,0,0,0.25); border-radius: 8px;
+  padding: 6px 12px; border: 1px solid rgba(100,200,200,0.1);
+}
+.player-seat.bottom {
+  /* Keep at bottom */
+}
+.player-gold {
+  font-size: 0.6rem; color: rgba(200,180,80,0.6);
+  margin-left: 4px;
+}
+
+/* ===== Hide old elements ===== */
+.play-area-label { display: none; }
+.game-table { border: none; background: transparent; }
