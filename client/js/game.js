@@ -290,8 +290,11 @@ const GameUI = {
       return (suitOrder[b.suit] || 0) - (suitOrder[a.suit] || 0);
     });
 
-    sorted.forEach(card => {
+    var overlap = Math.min(38, Math.max(22, (container.offsetWidth - 60) / Math.max(sorted.length, 1)));
+    sorted.forEach((card, idx) => {
       const el = UI.renderHandCard(card);
+      if (idx > 0) el.style.marginLeft = '-' + overlap + 'px';
+      el.style.zIndex = idx;
       if (this.selectedCards.has(card.id)) el.classList.add('selected');
       el.onclick = () => this.toggleCardSelection(card.id);
       container.appendChild(el);
@@ -311,8 +314,11 @@ const GameUI = {
   },
 
   renderHandSelection() {
+    var selIdx = 0;
     document.querySelectorAll('.hand-card').forEach(el => {
-      el.classList.toggle('selected', this.selectedCards.has(el.dataset.cardId));
+      var isSel = this.selectedCards.has(el.dataset.cardId);
+      el.classList.toggle('selected', isSel);
+      if (isSel) el.style.zIndex = 200 + (selIdx++);
     });
     const playBtn = document.getElementById('action-play');
     if (playBtn) {

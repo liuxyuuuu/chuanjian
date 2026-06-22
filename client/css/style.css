@@ -262,7 +262,7 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
   flex-direction: column;
 }
 .game-container {
-  background: radial-gradient(ellipse at center, #1a3a3a 0%, #0d1f1f 40%, #080f0f 100%); display: flex; flex-direction: column; height: 100%; width: 100%; position: relative; }
+  background: radial-gradient(ellipse at center, #42B4E9 0%, #1661A2 60%, #0f4280 100%); display: flex; flex-direction: column; height: 100%; width: 100%; position: relative; }
 
 .game-top-bar {
   display: flex; align-items: center; justify-content: space-between;
@@ -1169,3 +1169,100 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
 /* ===== Hide old elements ===== */
 .play-area-label { display: none; }
 .game-table { border: none; background: transparent; }
+
+/* ===== Bright UI theme ===== */
+.hand-card {
+  background: #fff !important; border-radius: 8px !important;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.25), 0 1px 3px rgba(0,0,0,0.15) !important;
+  border: 1px solid rgba(0,0,0,0.08) !important;
+  width: 52px; height: 74px; position: relative;
+  flex-shrink: 0; cursor: pointer; transition: transform 0.15s, margin-left 0.15s;
+}
+.hand-card .card-corner {
+  position: absolute; top: 4px; left: 5px; display: flex; gap: 1px; align-items: flex-start;
+}
+.hand-card .card-rank { font-size: 1rem; font-weight: bold; line-height: 1; }
+.hand-card .card-suit { font-size: 0.65rem; line-height: 1; margin-top: 1px; }
+.hand-card .card-center-suit {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  font-size: 1.3rem; opacity: 0.15;
+}
+.hand-card .card-suit-chinese { display: none; }
+.hand-card.selected {
+  transform: translateY(-18px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.2) !important;
+}
+.hand-card.red .card-center-suit,
+.hand-card.red .card-corner { color: #d32f2f; }
+.hand-card.black .card-center-suit,
+.hand-card.black .card-corner { color: #333; }
+.hand-cards {
+  display: flex; justify-content: center; padding: 4px 0;
+  min-height: 78px; align-items: flex-end;
+}
+
+/* ===== Circular timer ===== */
+.timer-circle {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f0d060, #c8a030);
+  box-shadow: 0 0 12px rgba(200,160,48,0.4), inset 0 -3px 6px rgba(0,0,0,0.15);
+  display: flex; align-items: center; justify-content: center;
+  position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+  z-index: 15;
+}
+.timer-text {
+  color: #fff; font-size: 1.2rem; font-weight: bold;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  -webkit-text-stroke: 1px rgba(0,0,0,0.25);
+}
+.game-timer-center { display: none; }
+
+/* ===== Top counter two-row ===== */
+#top-counter {
+  display: flex !important; justify-content: space-between; padding: 3px 10px;
+  background: rgba(0,0,0,0.15); border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.6rem; position: relative; z-index: 10;
+}
+.counter-title { display: none; }
+.counter-item {
+  display: flex; flex-direction: column; align-items: center; gap: 0;
+  color: rgba(255,255,255,0.5); line-height: 1.2;
+}
+.counter-item b {
+  font-size: 0.75rem; color: rgba(255,255,255,0.85); font-weight: 600;
+}
+
+/* ===== Pass bubble ===== */
+.pass-bubble {
+  position: absolute; top: -35px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,255,255,0.92); color: #333;
+  font-size: 1rem; font-weight: bold; padding: 4px 14px;
+  border-radius: 16px; white-space: nowrap; z-index: 30;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  animation: bubbleUp 1.5s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes bubbleUp {
+  0% { opacity: 0; transform: translateX(-50%) translateY(0) scale(0.6); }
+  20% { opacity: 1; transform: translateX(-50%) translateY(-3px) scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-25px) scale(0.8); }
+}
+
+/* ===== Declarer badge on card ===== */
+.hand-card.is-declarer::after {
+  content: '庄'; position: absolute; top: -4px; left: -4px;
+  background: #e8872e; color: #fff; font-size: 0.55rem;
+  padding: 1px 5px; border-radius: 4px; font-weight: bold;
+  font-family: 'ZCOOL XiaoWei',serif; z-index: 50;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+/* ===== Button scale feedback ===== */
+.action-btn:active:not(:disabled) {
+  transform: scale(0.95) !important;
+  top: 0 !important;
+}
+
+/* ===== Remove old game-table background ===== */
+.game-table { border: none; background: transparent !important; }

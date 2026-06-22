@@ -247,18 +247,21 @@ const UI = {
     const el = document.createElement('div');
     el.className = `hand-card ${f.color}`;
     el.dataset.cardId = card.id;
-    const rankSpan = document.createElement('div');
+    const corner = document.createElement('div');
+    corner.className = 'card-corner';
+    const rankSpan = document.createElement('span');
     rankSpan.className = 'card-rank';
     rankSpan.textContent = f.rank;
-    const suitSpan = document.createElement('div');
+    const suitSpan = document.createElement('span');
     suitSpan.className = 'card-suit';
     suitSpan.textContent = f.symbol;
-    const chineseSpan = document.createElement('div');
-    chineseSpan.className = 'card-suit-chinese';
-    chineseSpan.textContent = f.chinese;
-    el.appendChild(rankSpan);
-    el.appendChild(suitSpan);
-    el.appendChild(chineseSpan);
+    corner.appendChild(rankSpan);
+    corner.appendChild(suitSpan);
+    const center = document.createElement('div');
+    center.className = 'card-center-suit';
+    center.textContent = f.symbol;
+    el.appendChild(corner);
+    el.appendChild(center);
     return el;
   },
 

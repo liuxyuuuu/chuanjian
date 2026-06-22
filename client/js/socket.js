@@ -164,23 +164,26 @@ socket.on('game_start', (data) => {
   // 过牌广播
   socket.on('player_passed', (data) => {
     Sound.play('pass');
-    const player = GameUI.players[data.playerIndex];
-    const name = player ? player.nickname : '玩家';
     Sound.speakEvent('pass');
-    // Show "过" indicator in play area
+    // Show '不出' bubble above the player
+    var seatName = GameUI.getSeatName ? GameUI.getSeatName(data.playerIndex) : null;
+    if (seatName) {
+      var seatEl = document.getElementById('player-' + seatName);
+      if (seatEl) {
+        var bubble = document.createElement('div');
+        bubble.className = 'pass-bubble';
+        bubble.textContent = '不出';
+        seatEl.appendChild(bubble);
+        setTimeout(function(){ if(bubble.parentNode) bubble.remove(); }, 1500);
+      }
+    }
+    // Show "过" in center play area
     var passEl = document.createElement('div');
     passEl.textContent = '过';
     passEl.className = 'pass-indicator';
     var pc = document.getElementById('play-cards');
     if (pc) pc.appendChild(passEl);
-    setTimeout(function(){
-      if (passEl.parentNode) passEl.remove();
-    }, 1200);
-    if (data.roundReset) {
-      UI.showToast(name + ' 过，新回合始');
-    } else {
-      UI.showToast(name + ' 过牌');
-    }
+    setTimeout(function(){ if(passEl.parentNode) passEl.remove(); }, 1200);
   });
 
   // 队友揭晓
