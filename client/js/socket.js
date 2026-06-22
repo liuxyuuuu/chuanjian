@@ -60,7 +60,7 @@ socket.on('game_start', (data) => {
     document.body.appendChild(dealOverlay);
     
     // Auto-remove after 3.5s as fallback
-    window._dealTimer = setTimeout(removeDealingOverlay, 3500);
+    window._dealTimer = setTimeout(removeDealingOverlay, 1500);
   });
   
   function removeDealingOverlay() {

@@ -527,8 +527,10 @@ const GameUI = {
     this._countdownSec = seconds;
     const timerEl = document.getElementById('game-timer');
     if (!timerEl) return;
+    var tc = document.querySelector('.timer-circle');
+    if (tc) tc.style.display = 'flex';
     timerEl.textContent = seconds;
-    timerEl.className = 'game-timer-center';
+    timerEl.style.display = 'block';
     this._countdownTimer = setInterval(() => {
       this._countdownSec--;
         if (this._countdownSec <= 0) {
@@ -561,8 +563,10 @@ const GameUI = {
       clearInterval(this._countdownTimer);
       this._countdownTimer = null;
     }
+    var tc = document.querySelector('.timer-circle');
+    if (tc) tc.style.display = 'none';
     const timerEl = document.getElementById('game-timer');
-    if (timerEl) { timerEl.textContent = ''; timerEl.className = 'game-timer-center'; }
+    if (timerEl) { timerEl.textContent = ''; timerEl.style.display = 'none'; }
   },
 
   hideResult() {
