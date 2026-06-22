@@ -21,6 +21,24 @@ function initSocket() {
 
   // 游戏开始
   var _isQuickAI = false;
+var cardCounts = {};
+function initCardCounter() {
+  var ranks = ['3','2','A','K','Q','J','10','9','8','7','6','5','4'];
+  ranks.forEach(function(r){ cardCounts[r] = 4; });
+}
+function updateCardCounter() {
+  var items = document.querySelectorAll('#top-counter .counter-item');
+  if (!items || items.length === 0) return;
+  // Skip first item (title)
+  var ranks = ['3','2','A','K','Q','J','10','9','8','7','6','5','4'];
+  for (var i = 0; i < ranks.length && i < items.length; i++) {
+    var count = cardCounts[ranks[i]];
+    if (count !== undefined) {
+      var b = items[i].querySelector('b');
+      if (b) items[i].innerHTML = b.outerHTML + 'x' + count;
+    }
+  }
+}
 socket.on('game_start', (data) => {
     window._isQuickAI = data.isQuickAI || false;
     UI.showPage('game-page');
@@ -137,7 +155,15 @@ socket.on('game_start', (data) => {
   socket.on('cards_played', (data) => {
     GameUI.clearSelection();
     Sound.play('playCard');
-    // Animate cards flying from player seat to center
+    // Update card counter
+    if (data.cards && data.cards.length > 0) {
+      data.cards.forEach(function(c){
+        var rank = c.rank || (typeof c === 'string' ? c.slice(1) : '');
+        if (cardCounts[rank] !== undefined) cardCounts[rank]--;
+      });
+      updateCardCounter();
+    }
+    // Animate cards flying from player seat
     if (data.cards && data.cards.length > 0) {
       const cardIds = data.cards.map(function(c) { return c.id || c; });
       GameUI.animateCardsFly(data.playerIndex, cardIds);
