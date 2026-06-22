@@ -74,7 +74,7 @@ html, body {
 .game-title .rules-btn {
   display: inline-block; margin-top: 8px;
   font-family: 'Noto Serif SC', serif;
-  font-size: 0.78rem; color: rgba(230,200,100,0.4);
+  font-size: 0.82rem; color: rgba(238,214,140,0.9);
   cursor: pointer; background: none; border: none;
   transition: color 0.2s; padding: 4px 8px;
 }
@@ -147,13 +147,13 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
 }
 .btn.primary:hover { box-shadow: 0 4px 20px rgba(201,168,76,0.35); }
 .btn.secondary {
-  background: rgba(245,240,232,0.1);
-  color: rgba(230,200,100,0.7);
-  border: 1px solid rgba(201,168,76,0.2);
+  background: rgba(245,240,232,0.16);
+  color: rgba(238,214,140,0.96);
+  border: 1px solid rgba(201,168,76,0.45);
 }
 .btn.outline {
-  background: transparent; color: var(--rice-paper);
-  border: 1px solid rgba(245,240,232,0.25);
+  background: rgba(0,0,0,0.12); color: var(--rice-paper);
+  border: 1px solid rgba(245,240,232,0.5);
 }
 .btn.outline:hover { border-color: var(--gold); color: var(--gold); }
 .btn.small { padding: 8px 16px; font-size: 0.85rem; }
@@ -163,6 +163,28 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
   border-radius: 4px; padding: 2px 8px;
 }
 .btn.ghost:hover { color: var(--gold-light); }
+
+/* ===== 主界面模式按钮（人机 / 玩家对战）===== */
+.mode-select { display: flex; gap: 12px; margin-bottom: 16px; }
+.mode-btn {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 20px 10px; cursor: pointer;
+  border-radius: 8px;
+  border: 1px solid rgba(232,200,90,0.6);
+  background: linear-gradient(160deg, #b07a24 0%, #6c4c14 100%);
+  color: #fff;
+  font-family: 'Noto Serif SC', serif;
+  transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+}
+.mode-btn:nth-child(2) {
+  background: linear-gradient(160deg, #2e6f8e 0%, #1b3f59 100%);
+  border-color: rgba(120,200,230,0.55);
+}
+.mode-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.4); border-color: var(--gold-light); }
+.mode-btn:active { transform: scale(0.97); }
+.mode-icon { font-size: 2.8rem; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35)); }
+.mode-label { font-size: 1.05rem; font-weight: 700; letter-spacing: 4px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5); }
 
 /* ===== Avatar Picker ===== */
 .avatar-picker {
@@ -272,8 +294,8 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
   z-index: 10;
   border-bottom: 1px solid rgba(201,168,76,0.06);
 }
-.game-status { color: rgba(230,200,100,0.5); font-size: 0.8rem; letter-spacing: 2px; }
-.game-timer { color: rgba(230,200,100,0.35); font-size: 0.78rem; }
+.game-status { color: rgba(236,210,130,0.92); font-size: 0.8rem; letter-spacing: 2px; }
+.game-timer { color: rgba(236,210,130,0.7); font-size: 0.78rem; }
 
 /* Called card bar */
 .called-card-bar {
@@ -285,8 +307,8 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
 }
 .called-card-bar.hidden { display: none; }
 .called-card-label {
-  color: rgba(230,200,100,0.35); font-size: 0.78rem;
-  letter-spacing: 2px;
+  color: rgba(238,214,140,0.95); font-size: 0.8rem;
+  letter-spacing: 2px; font-weight: 600;
 }
 .called-card-display { color: var(--gold); font-weight: bold; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 4px; }
 .called-card-display .play-card {
@@ -300,8 +322,8 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
 }
 .sound-toggle {
   position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
-  font-size: 0.9rem; padding: 2px 6px; cursor: pointer;
-  background: none; border: none; color: rgba(230,200,100,0.35); line-height: 1;
+  font-size: 1rem; padding: 2px 6px; cursor: pointer;
+  background: none; border: none; color: rgba(236,210,130,0.9); line-height: 1;
 }
 .sound-toggle:hover { color: var(--gold-light); }
 
@@ -515,7 +537,7 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
   border-top: 1px solid rgba(201,168,76,0.06);
 }
 .action-bar .btn { flex: 1; }
-#action-hint { flex: 1; padding: 8px 12px; font-size: 0.85rem; }
+#action-hint { flex: 1 1 0; }
 
 /* ===== Overlays ===== */
 .overlay {
@@ -863,8 +885,8 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
 .dev-mode-btn {
   position: fixed; bottom: 12px; right: 12px;
   padding: 4px 10px; font-size: 0.7rem;
-  background: rgba(245,240,232,0.04); color: rgba(230,200,100,0.2);
-  border: 1px solid rgba(245,240,232,0.06); border-radius: 2px;
+  background: rgba(245,240,232,0.1); color: rgba(236,210,130,0.6);
+  border: 1px solid rgba(245,240,232,0.18); border-radius: 2px;
   cursor: pointer; z-index: 50;
   transition: all 0.2s;
   font-family: 'ZCOOL XiaoWei', serif;
@@ -1070,11 +1092,11 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
 
 /* ===== Card rememberer (left side) ===== */
 #card-rememberer {
-  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
-  z-index: 5; pointer-events: none;
+  position: absolute; left: 4px; bottom: 110px; top: auto; transform: none;
+  z-index: 5; pointer-events: none; opacity: 0.85;
 }
 .rem-card {
-  width: 48px; height: 66px; border-radius: 4px;
+  width: 32px; height: 44px; border-radius: 4px;
   background: rgba(255,255,255,0.12);
   border: 1px solid rgba(200,230,230,0.2);
   position: absolute; backdrop-filter: blur(4px);
@@ -1082,8 +1104,8 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 #rem-card-0 { transform: rotate(-6deg); left: 0; top: 0; }
-#rem-card-1 { transform: rotate(-2deg); left: 10px; top: 10px; }
-#rem-card-2 { transform: rotate(3deg); left: 20px; top: 20px; }
+#rem-card-1 { transform: rotate(-2deg); left: 7px; top: 6px; }
+#rem-card-2 { transform: rotate(3deg); left: 14px; top: 12px; }
 .rem-inner { text-align: center; }
 .rem-rank { font-size: 1rem; font-weight: bold; color: rgba(255,255,255,0.5); display:block; }
 .rem-suit { font-size: 0.7rem; color: rgba(255,255,255,0.3); }
@@ -1092,17 +1114,19 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
 .action-bar {
   position: relative; z-index: 20;
   display: flex; align-items: center; justify-content: center;
-  gap: 12px; padding: 10px 16px;
+  gap: 12px; padding: 8px 16px; min-height: 52px;
   background: rgba(0,0,0,0.35);
 }
 .action-btn {
+  flex: 1 1 0; min-width: 0;
   border: none; border-radius: 10px;
   font-size: 0.9rem; font-weight: bold;
-  padding: 10px 24px; min-width: 80px;
+  padding: 10px 0;
   cursor: pointer; transition: all 0.15s;
   font-family: 'ZCOOL XiaoWei',serif; letter-spacing: 2px;
   box-shadow: 0 4px 0 rgba(0,0,0,0.3), 0 6px 12px rgba(0,0,0,0.2);
   position: relative; top: 0;
+  text-align: center; white-space: nowrap;
 }
 .action-btn:active { top: 3px; box-shadow: 0 1px 0 rgba(0,0,0,0.3); }
 .action-btn:disabled { opacity: 0.3; top: 2px; box-shadow: 0 1px 0 rgba(0,0,0,0.2); cursor:default; }
@@ -1118,7 +1142,6 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
   background: linear-gradient(180deg, #e8c84a 0%, #c4a230 100%);
   color: #3a2e10; text-shadow: 0 1px 2px rgba(255,255,200,0.3);
   border: 1px solid rgba(200,180,80,0.3);
-  margin-top: -6px;
 }
 .btn-hint:hover:not(:disabled) {
   background: linear-gradient(180deg, #f0d85a 100%, #d4b240 100%);
@@ -1192,20 +1215,45 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
   min-height: 78px; align-items: flex-end; gap: 3px;
 }
 
-/* ===== Circular timer ===== */
+/* ===== Circular timer (牌桌中央 + 出牌指向) ===== */
 .timer-circle {
-  width: 48px; height: 48px; border-radius: 50%;
+  width: 50px; height: 50px; border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #f0d060, #c8a030);
-  box-shadow: 0 0 12px rgba(200,160,48,0.4), inset 0 -3px 6px rgba(0,0,0,0.15);
+  box-shadow: 0 0 14px rgba(200,160,48,0.5), inset 0 -3px 6px rgba(0,0,0,0.15);
   display: none; align-items: center; justify-content: center;
-  position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
-  z-index: 15;
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 25; overflow: visible; pointer-events: none;
+}
+.timer-circle.me {
+  box-shadow: 0 0 20px rgba(255,95,60,0.65), inset 0 -3px 6px rgba(0,0,0,0.15);
+}
+/* 指向箭头：随 wrap 旋转，指向当前出牌玩家所在座位 */
+.turn-pointer-wrap {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  transition: transform 0.35s ease;
+}
+.turn-pointer {
+  position: absolute; top: -17px; left: 50%;
+  width: 0; height: 0;
+  border-left: 11px solid transparent;
+  border-right: 11px solid transparent;
+  border-bottom: 16px solid #ffd34d;
+  filter: drop-shadow(0 0 5px rgba(255,200,60,0.9));
+  transform: translateX(-50%);
+  animation: pointer-pulse 0.9s ease-in-out infinite;
+}
+.timer-circle.me .turn-pointer { border-bottom-color: #ff7a52; }
+@keyframes pointer-pulse {
+  0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.85; }
+  50% { transform: translateX(-50%) translateY(-3px); opacity: 1; }
 }
 .timer-text {
-  color: #fff; font-size: 1.2rem; font-weight: bold;
+  color: #fff; font-size: 1.3rem; font-weight: bold; line-height: 1;
   text-shadow: 0 1px 3px rgba(0,0,0,0.4);
   -webkit-text-stroke: 1px rgba(0,0,0,0.55);
 }
+.timer-text.urgent { color: #ff6a4d; animation: timer-urgent 0.5s infinite; }
 .game-timer-center { display: none; }
 
 /* ===== Top counter two-row ===== */
@@ -1217,10 +1265,10 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
 .counter-title { display: none; }
 .counter-item {
   display: flex; flex-direction: column; align-items: center; gap: 0;
-  color: rgba(255,255,255,0.5); line-height: 1.2;
+  color: rgba(255,255,255,0.78); line-height: 1.2;
 }
 .counter-item b {
-  font-size: 0.75rem; color: rgba(255,255,255,0.85); font-weight: 600;
+  font-size: 0.78rem; color: rgba(255,255,255,0.97); font-weight: 700;
 }
 
 /* ===== Pass bubble ===== */
@@ -1257,3 +1305,96 @@ input::placeholder { color: rgba(230,200,100,0.2); font-family: 'Noto Serif SC',
 
 /* ===== Remove old game-table background ===== */
 .game-table { border: none; background: transparent !important; }
+
+/* ===================================================================== */
+/* ===== 座位 / 出牌区 改版 (v2) ===== */
+/* ===================================================================== */
+#game-table { position: relative; }
+
+/* 头像统一圆形 */
+.player-seat .player-avatar {
+  border-radius: 50% !important;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  border: 2px solid rgba(255,255,255,0.22);
+  flex-shrink: 0; overflow: hidden;
+}
+
+/* 身份小药丸（庄 / 帮庄 / 闲） */
+.player-seat .player-badge {
+  display: inline-block; min-width: 0; width: auto; height: auto;
+  font-size: 0.58rem; line-height: 1.4; padding: 0 6px; border-radius: 8px;
+  font-weight: 700; letter-spacing: 1px; white-space: nowrap; margin: 0;
+}
+
+/* 昵称小框 + 积分小框 */
+.score-chip {
+  display: inline-flex; align-items: center; justify-content: center; gap: 2px;
+  font-size: 0.6rem; line-height: 1; padding: 2px 6px; border-radius: 6px;
+  background: rgba(201,168,76,0.18); border: 1px solid rgba(201,168,76,0.42);
+  color: #f0d987; white-space: nowrap;
+}
+.score-chip .score-val { font-weight: 700; }
+
+/* 牌背 + 剩余张数 */
+.count-back {
+  position: relative; width: 24px; height: 32px; border-radius: 3px;
+  background: repeating-linear-gradient(45deg, #6d2f2f, #6d2f2f 3px, #8a3a3a 3px, #8a3a3a 6px);
+  border: 1px solid rgba(255,255,255,0.28);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.count-back .count-num {
+  font-size: 0.68rem; font-weight: 800; color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  background: rgba(0,0,0,0.4); border-radius: 6px; padding: 0 3px; min-width: 15px; text-align: center;
+}
+.count-back.is-finished { filter: grayscale(0.7) brightness(0.8); }
+.count-back.is-finished .count-num { background: rgba(0,0,0,0.55); }
+
+/* 对家（上, 居中）横排 */
+.player-seat.top { flex-direction: column !important; align-items: center; gap: 3px; padding: 4px 0; }
+.player-seat.top .seat-row { display: flex; align-items: center; gap: 8px; }
+.player-seat.top .player-avatar { width: 42px; height: 42px; font-size: 1.4rem; }
+.player-seat.top .seat-meta { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.player-seat.top .player-name { font-size: 0.74rem; max-width: 30vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 上家 / 下家（左右）竖排 */
+.player-seat.left, .player-seat.right { flex-direction: column !important; align-items: center; gap: 3px; max-width: 22vw; }
+.player-seat.left .seat-row, .player-seat.right .seat-row { display: flex; align-items: center; gap: 4px; }
+.player-seat.left .player-avatar, .player-seat.right .player-avatar { width: 38px !important; height: 38px !important; font-size: 1.2rem !important; }
+.player-seat.left .seat-meta, .player-seat.right .seat-meta { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.player-seat.left .player-name, .player-seat.right .player-name { font-size: 0.66rem !important; max-width: 20vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 中央行：左座 | 上家出牌 | 中心 | 下家出牌 | 右座 */
+.table-middle { display: flex; align-items: center; justify-content: center; gap: 4px; }
+.table-middle .player-seat.left, .table-middle .player-seat.right { flex: 0 0 auto; }
+.table-middle .seat-played { flex: 1 1 0; min-width: 0; }
+.table-center { flex: 0 0 6px; }
+
+/* 出牌区 */
+.seat-played { display: flex; gap: 2px; justify-content: center; align-items: center; min-height: 44px; flex-wrap: wrap; }
+.seat-played .play-card { width: 30px; height: 42px; font-size: 0.7rem; margin: 0; }
+#played-top { min-height: 44px; margin: 2px 0; }
+.self-played { min-height: 50px; margin-top: 2px; }
+.self-played .play-card { width: 36px; height: 50px; font-size: 0.82rem; }
+/* “不出” 占位（保留到本轮重置） */
+.seat-played .pass-mark {
+  font-size: 0.74rem; color: #d3b15a; letter-spacing: 3px; font-weight: 600;
+  background: rgba(0,0,0,0.32); border: 1px dashed rgba(201,168,76,0.5);
+  border-radius: 5px; padding: 3px 10px;
+}
+
+/* 自己信息条（手牌下方, 最底部） */
+.player-seat.bottom.self-bar {
+  flex-direction: row !important; align-items: center; justify-content: center; gap: 8px;
+  padding: 6px 10px; background: rgba(0,0,0,0.32); border-radius: 0;
+}
+.player-seat.bottom.self-bar .player-avatar { width: 42px !important; height: 42px !important; font-size: 1.5rem !important; }
+.player-seat.bottom.self-bar .player-badge { font-size: 0.62rem; padding: 2px 7px; }
+.player-seat.bottom.self-bar .name-box,
+.player-seat.bottom.self-bar .score-box {
+  min-width: 88px; justify-content: center;
+  font-size: 0.82rem; padding: 7px 10px; border-radius: 8px;
+}
+.player-seat.bottom.self-bar .name-box { color: #fff; background: rgba(245,240,232,0.12); border-color: rgba(245,240,232,0.3); }

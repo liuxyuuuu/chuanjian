@@ -4,9 +4,9 @@ const { Server } = require('socket.io');
 const path = require('path');
 const { botCallCard, botPlayCards } = require('./game/botAi');
 const { aiCallCard, aiPlayCards } = require('./game/aiBot');
-const { createTeamTracker } = require('./game/teamDeduction');
+const { createTeamTracker, updateAllTrackers } = require('./game/teamDeduction');
 const RoomManager = require('./room/roomManager');
-const { PHASE } = require('./game/gameManager');
+const { PHASE, GameManager } = require('./game/gameManager');
 
 // ===== Match System =====
 var onlineCount = 0;
@@ -81,7 +81,7 @@ io.on('connection', (socket) => {
     const room = roomManager.getRoom(roomCode);
     if (!room) { if (callback) callback({ success: false, reason: "房间不存在" }); return; }
     const game = new (require("./game/gameManager").GameManager)(roomCode);
-    const startResult = game.startDevMode(room.players.map(p => ({
+    const startResult = game.start(room.players.map(p => ({
       socketId: p.socketId,
       nickname: p.nickname,
       avatar: p.avatar || "",
@@ -100,12 +100,15 @@ io.on('connection', (socket) => {
     room.players.forEach((p, i) => {
       io.to(p.socketId).emit("game_state", Object.assign(room.game.getGameState(i), { cumulativeScores: room.scores || [0,0,0,0] }));
     });
-    // 处理叫牌（H4在玩家手中）
-    const declarer = room.players[0];
-    io.to(declarer.socketId).emit("your_turn_call", {
-      myHand: game.getPlayerHand(0),
-      canCallAny: true,
-    });
+    // 叫牌：庄家是红桃4持有者（可能是机器人）
+    const declarer = room.players[startResult.declarerIndex];
+    if (declarer && !declarer.isBot) {
+      io.to(declarer.socketId).emit("your_turn_call", {
+        myHand: game.getPlayerHand(startResult.declarerIndex),
+        canCallAny: true,
+      });
+    }
+    scheduleBotTurn(roomCode);
     if (callback) callback({ success: true, roomCode });
   });
 
@@ -278,7 +281,7 @@ io.on('connection', (socket) => {
       });
       
       room.players.forEach((p, i) => {
-        io.to(p.socketId).emit('game_state', undefined);
+        io.to(p.socketId).emit('game_state', Object.assign(room.game.getGameState(i), { cumulativeScores: room.scores || [0,0,0,0] }));
       });
 
       // 如果是电脑庄家，自动叫牌
@@ -370,9 +373,11 @@ io.on('connection', (socket) => {
     if (!player) { if (callback) callback({ success: false, reason: '玩家不存在' }); return; }
     
     const { cardIds } = data;
+    const prevLastPlay = room.game.lastPlay;
     const result = room.game.playCards(player.index, cardIds);
     
     if (result.success) {
+      recordTrackerAction(room, player.index, 'play', prevLastPlay, cardIds);
       io.to(roomCode).emit('cards_played', {
         playerIndex: result.playerIndex,
         cards: result.cards,
@@ -388,19 +393,13 @@ io.on('connection', (socket) => {
           calledCardId: room.game.calledCardId,
         });
       }
-      
-      scheduleBotTurn(roomCode);
 
       if (result.gameOver) {
-        io.to(roomCode).emit('game_over', {
-          result: result.result,
-        });
-        room.isPlaying = false;
-        room.game = null;
-        room.players.forEach(p => p.ready = false);
-        broadcastRoomUpdate(roomCode);
+        finishGame(room, roomCode, result);
         return;
       }
+
+      scheduleBotTurn(roomCode);
       
       room.players.forEach((p, i) => {
         io.to(p.socketId).emit('game_state', Object.assign(room.game.getGameState(i), { cumulativeScores: room.scores || [0,0,0,0] }));
@@ -427,9 +426,11 @@ io.on('connection', (socket) => {
     const player = roomManager.getPlayerFromRoom(roomCode, socket.id);
     if (!player) { if (callback) callback({ success: false, reason: '玩家不存在' }); return; }
     
+    const prevLastPlay = room.game.lastPlay;
     const result = room.game.pass(player.index);
     
     if (result.success) {
+      recordTrackerAction(room, player.index, 'pass', prevLastPlay, null);
       io.to(roomCode).emit('player_passed', {
         playerIndex: result.playerIndex,
         roundReset: result.roundReset,
@@ -526,6 +527,10 @@ io.on('connection', (socket) => {
       } else {
         socket.leave(result.roomCode);
         broadcastRoomUpdate(result.roomCode);
+        if (result.action === 'player_disconnected_ingame') {
+          io.to(result.roomCode).emit('player_disconnected', { socketId: socket.id });
+          scheduleBotTurn(result.roomCode); // 让服务器接管该断线座位继续推进
+        }
       }
     }
     if (callback) callback({ success: true });
@@ -543,9 +548,34 @@ io.on('connection', (socket) => {
     if (callback) callback({ success: true, difficulty });
   });
 
+  // 在线匹配：加入匹配队列
+  socket.on('quick_match', (data, callback) => {
+    const nickname = (data && data.nickname) || ('玩家' + socket.id.slice(0, 4));
+    const avatar = (data && data.avatar) || '';
+    currentNickname = nickname;
+    removeFromMatchQueue(socket.id);
+    matchQueue.push({ socketId: socket.id, socket, nickname, avatar });
+    notifyMatchQueue();
+    if (callback) callback({ success: true, queueSize: matchQueue.length });
+    if (matchQueue.length >= 4) {
+      tryFormMatch(false);
+    } else {
+      if (matchTimer) clearTimeout(matchTimer);
+      matchTimer = setTimeout(() => tryFormMatch(true), 12000);
+    }
+  });
+
+  // 取消匹配
+  socket.on('cancel_match', () => {
+    removeFromMatchQueue(socket.id);
+    notifyMatchQueue();
+    if (matchQueue.length === 0 && matchTimer) { clearTimeout(matchTimer); matchTimer = null; }
+  });
+
   // 断开连接
   socket.on('disconnect', () => {
     console.log(`[断开] ${socket.id} 已断开`);
+    removeFromMatchQueue(socket.id);
     const result = roomManager.leaveRoom(socket.id);
     if (result) {
       if (result.action !== 'room_deleted') {
@@ -553,109 +583,231 @@ io.on('connection', (socket) => {
         io.to(result.roomCode).emit('player_disconnected', {
           socketId: socket.id,
         });
+        if (result.action === 'player_disconnected_ingame') {
+          scheduleBotTurn(result.roomCode); // 让服务器接管该断线座位继续推进
+        }
       }
     }
   });
 });
 
 
-// ===== 机器人回合自动执行 =====
+// ===== 回合自动推进（机器人 / 断线托管 / 真人超时托管） =====
+const HUMAN_TURN_MS = 30000; // 连线真人超时托管阈值（>客户端 20s 倒计时）
+const AUTO_TURN_MS = 2000;   // 机器人/断线座位的行动延迟
+
+function isAutoSeat(room, idx) {
+  const p = room.players[idx];
+  return !!(p && (p.isBot || p.disconnected));
+}
+
+function clearRoomTimer(room) {
+  if (room && room._turnTimer) { clearTimeout(room._turnTimer); room._turnTimer = null; }
+}
+
+function ensureTrackers(room) {
+  if (!room.game) return;
+  if (!room.teamTrackers || Object.keys(room.teamTrackers).length < 4) {
+    room.teamTrackers = {};
+    const gs = room.game.getGameState(0);
+    for (let i = 0; i < 4; i++) room.teamTrackers[i] = createTeamTracker(i, gs);
+  }
+}
+
+// 把一次出牌/过牌喂给队友推断系统
+function recordTrackerAction(room, actorIndex, kind, prevLastPlay, playedCardIds) {
+  if (!room || !room.game || !room.teamTrackers) return;
+  let action;
+  if (kind === 'pass') {
+    action = { actor: actorIndex, type: 'pass', target: prevLastPlay ? prevLastPlay.playerIndex : undefined };
+  } else {
+    const calledCardPlayed = !!(playedCardIds && room.game.calledCardId && playedCardIds.includes(room.game.calledCardId));
+    action = {
+      actor: actorIndex,
+      type: calledCardPlayed ? 'play' : (prevLastPlay ? 'beat' : 'play'),
+      target: prevLastPlay ? prevLastPlay.playerIndex : undefined,
+      calledCardPlayed,
+      calledCard: room.game.calledCardId,
+    };
+  }
+  try { updateAllTrackers(room.teamTrackers, room.game.getGameState(0), action); } catch (e) {}
+}
+
+// 向所有"连线真人"广播各自的游戏状态
+function broadcastState(room) {
+  if (!room.game) return;
+  room.players.forEach((p, i) => {
+    if (p.isBot || p.disconnected) return;
+    io.to(p.socketId).emit('game_state', Object.assign(room.game.getGameState(i), { cumulativeScores: room.scores || [0,0,0,0] }));
+  });
+}
+
+// 统一的结算收尾：累计积分、清状态、广播
+function finishGame(room, roomCode, result) {
+  io.to(roomCode).emit('game_over', { result: result.result });
+  if (result.result && result.result.perPlayerScores) {
+    roomManager.updateScores(roomCode, result.result.perPlayerScores);
+  }
+  clearRoomTimer(room);
+  room.isPlaying = false;
+  room.game = null;
+  room.teamTrackers = null;
+  room.players.forEach(p => { p.ready = false; p.disconnected = false; p.connected = true; });
+  broadcastRoomUpdate(roomCode);
+}
+
+// 调度：为"当前回合"座位安排一个（且仅一个）定时器。
+// 机器人/断线座位 -> 短延时自动行动；连线真人 -> 仅作超时兜底。
 function scheduleBotTurn(roomCode) {
   const room = roomManager.getRoom(roomCode);
   if (!room || !room.game) return;
-  if (room.game.phase === PHASE.FINISHED || room.game.phase === PHASE.WAITING) return;
+  clearRoomTimer(room);
+  const phase = room.game.phase;
+  if (phase === PHASE.FINISHED || phase === PHASE.WAITING) return;
 
-  // CALL phase: check if declarer is a bot
-  if (room.game.phase === PHASE.CALL) {
-    const declarer = room.players[room.game.declarerIndex];
-    if (!declarer || !declarer.isBot) return;
-  } else {
-    // PLAYING phase: check current turn player
-    const cp = room.players[room.game.currentTurnIndex];
-    if (!cp || !cp.isBot) return;
-  }
+  const seatIdx = phase === PHASE.CALL ? room.game.declarerIndex : room.game.currentTurnIndex;
+  if (seatIdx === undefined || seatIdx < 0) return;
 
-  setTimeout(async () => {
-    const cr = roomManager.getRoom(roomCode);
-    if (!cr || !cr.game) return;
-    if (cr.game.phase === PHASE.FINISHED) return;
+  const delay = isAutoSeat(room, seatIdx) ? AUTO_TURN_MS : HUMAN_TURN_MS;
+  const nonce = (room._turnNonce || 0) + 1;
+  room._turnNonce = nonce;
+  room._turnTimer = setTimeout(() => { performAutoTurn(roomCode, nonce); }, delay);
+}
 
-    // Initialize team trackers for AI bots (once)
-    if (!cr.teamTrackers || Object.keys(cr.teamTrackers).length < 4) {
-      cr.teamTrackers = {};
-      const gs = cr.game.getGameState(0);
-      for (let i = 0; i < 4; i++) {
-        cr.teamTrackers[i] = createTeamTracker(i, gs);
-      }
-    }
+// 执行当前座位的自动行动（机器人决策；真人超时同样用机器人逻辑代打）
+async function performAutoTurn(roomCode, nonce) {
+  const room = roomManager.getRoom(roomCode);
+  if (!room || !room.game) return;
+  if (nonce !== undefined && room._turnNonce !== nonce) return; // 过期定时器，忽略
+  room._turnTimer = null;
+  const game = room.game;
+  if (game.phase === PHASE.FINISHED) return;
+  ensureTrackers(room);
+  const diff = room.botDifficulty || 'easy';
 
-    if (cr.game.phase === PHASE.CALL) {
-      const declarer = cr.players[cr.game.declarerIndex];
-      if (!declarer || !declarer.isBot) return;
-      // Bot declarer calls a card
-      const hand = cr.game.getPlayerHand(cr.game.declarerIndex);
-      const diff = (roomManager.getRoom(roomCode) || {}).botDifficulty || 'easy';
+  try {
+    if (game.phase === PHASE.CALL) {
+      const idx = game.declarerIndex;
+      const hand = game.getPlayerHand(idx);
       let cardId;
-      if (diff === 'ai') {
-        cardId = await aiCallCard(hand, (cr.teamTrackers || {})[cr.game.declarerIndex]);
-      } else {
-        cardId = botCallCard(hand, diff);
-      }
-      const res = cr.game.callCard(cr.game.declarerIndex, cardId);
+      if (diff === 'ai') cardId = await aiCallCard(hand, (room.teamTrackers || {})[idx]);
+      else cardId = botCallCard(hand, diff);
+      const res = game.callCard(idx, cardId);
       if (res.success) {
-        io.to(roomCode).emit("card_called", { calledCard: res.calledCard, declarerIndex: cr.game.declarerIndex });
-        cr.players.forEach((p, i) => {
-          if (!p.isBot) io.to(p.socketId).emit("game_state", Object.assign(cr.game.getGameState(i), { cumulativeScores: (roomManager.getRoom(roomCode) || {}).scores || [0,0,0,0] }));
-        });
-        const np = cr.players[res.currentTurn];
-        if (np && !np.isBot) io.to(np.socketId).emit("your_turn", { lastPlay: null, isNewRound: true });
+        io.to(roomCode).emit('card_called', { calledCard: res.calledCard, declarerIndex: game.declarerIndex });
+        broadcastState(room);
+        const np = room.players[res.currentTurn];
+        if (np && !np.isBot && !np.disconnected) io.to(np.socketId).emit('your_turn', { lastPlay: null, isNewRound: true });
         scheduleBotTurn(roomCode);
       }
-    } else if (cr.game.phase === PHASE.PLAYING) {
-      const bp = cr.players[cr.game.currentTurnIndex];
-      if (!bp || !bp.isBot) return;
-      const hand = cr.game.getPlayerHand(cr.game.currentTurnIndex);
-      const diff = (roomManager.getRoom(roomCode) || {}).botDifficulty || 'easy';
+      return;
+    }
+
+    if (game.phase === PHASE.PLAYING) {
+      const idx = game.currentTurnIndex;
+      if (idx < 0) return;
+      const hand = game.getPlayerHand(idx);
+      const prevLastPlay = game.lastPlay;
       let dec;
       if (diff === 'ai') {
-        const gs = cr.game.getGameState(cr.game.currentTurnIndex);
-        dec = await aiPlayCards(hand, cr.game.lastPlay, gs, cr.game.currentTurnIndex, (cr.teamTrackers || {})[cr.game.currentTurnIndex]);
+        const gs = game.getGameState(idx);
+        dec = await aiPlayCards(hand, game.lastPlay, gs, idx, (room.teamTrackers || {})[idx]);
       } else {
-        dec = botPlayCards(hand, cr.game.lastPlay, diff);
+        dec = botPlayCards(hand, game.lastPlay, diff);
+      }
+      if (!dec) dec = { action: 'pass' };
+      // 新回合（无上家牌）不能过：自动出最小单张兜底
+      if (dec.action !== 'play' && !game.lastPlay) {
+        const smallest = [...hand].sort((a, b) => a.value - b.value)[0];
+        if (smallest) dec = { action: 'play', cardIds: [smallest.id] };
       }
 
-      if (dec.action === "play") {
-        const res = cr.game.playCards(cr.game.currentTurnIndex, dec.cardIds);
+      if (dec.action === 'play') {
+        const res = game.playCards(idx, dec.cardIds);
         if (res.success) {
-          io.to(roomCode).emit("cards_played", { playerIndex: res.playerIndex, cards: res.cards, handAnalysis: res.handAnalysis, justFinished: res.justFinished, finishPosition: res.finishPosition });
-          if (res.teammateJustRevealed) io.to(roomCode).emit("teammate_revealed", { teammateIndex: res.teammateIndex, teammateNickname: res.teammateNickname, calledCardId: cr.game.calledCardId });
-          if (res.gameOver) {
-            io.to(roomCode).emit("game_over", { result: res.result });
-            cr.isPlaying = false; cr.game = null;
-            cr.players.forEach(p => p.ready = false);
-            return;
-          }
-          cr.players.forEach((p, i) => {
-            if (!p.isBot) io.to(p.socketId).emit("game_state", Object.assign(cr.game.getGameState(i), { cumulativeScores: (roomManager.getRoom(roomCode) || {}).scores || [0,0,0,0] }));
-          });
-          const np = cr.players[res.currentTurn];
-          if (np && !np.isBot) io.to(np.socketId).emit("your_turn", { lastPlay: cr.game.lastPlay, isNewRound: false });
+          recordTrackerAction(room, idx, 'play', prevLastPlay, dec.cardIds);
+          io.to(roomCode).emit('cards_played', { playerIndex: res.playerIndex, cards: res.cards, handAnalysis: res.handAnalysis, justFinished: res.justFinished, finishPosition: res.finishPosition });
+          if (res.teammateJustRevealed) io.to(roomCode).emit('teammate_revealed', { teammateIndex: res.teammateIndex, teammateNickname: res.teammateNickname, calledCardId: game.calledCardId });
+          if (res.gameOver) { finishGame(room, roomCode, res); return; }
+          broadcastState(room);
+          const np = room.players[res.currentTurn];
+          if (np && !np.isBot && !np.disconnected) io.to(np.socketId).emit('your_turn', { lastPlay: game.lastPlay, isNewRound: false });
           scheduleBotTurn(roomCode);
+          return;
         }
-      } else {
-        const res = cr.game.pass(cr.game.currentTurnIndex);
-        if (res.success) {
-          io.to(roomCode).emit("player_passed", { playerIndex: res.playerIndex, roundReset: res.roundReset });
-          cr.players.forEach((p, i) => {
-            if (!p.isBot) io.to(p.socketId).emit("game_state", Object.assign(cr.game.getGameState(i), { cumulativeScores: (roomManager.getRoom(roomCode) || {}).scores || [0,0,0,0] }));
-          });
-          const np = cr.players[res.currentTurn];
-          if (np && !np.isBot) io.to(np.socketId).emit("your_turn", { lastPlay: cr.game.lastPlay, isNewRound: res.roundReset });
-          scheduleBotTurn(roomCode);
-        }
+        // 兜底：决策出牌被拒，则尝试过牌
+        dec = { action: 'pass' };
+      }
+
+      const res = game.pass(idx);
+      if (res.success) {
+        recordTrackerAction(room, idx, 'pass', prevLastPlay, null);
+        io.to(roomCode).emit('player_passed', { playerIndex: res.playerIndex, roundReset: res.roundReset });
+        broadcastState(room);
+        const np = room.players[res.currentTurn];
+        if (np && !np.isBot && !np.disconnected) io.to(np.socketId).emit('your_turn', { lastPlay: game.lastPlay, isNewRound: res.roundReset });
+        scheduleBotTurn(roomCode);
       }
     }
-  }, 2000);
+  } catch (e) {
+    console.log('[ERR] performAutoTurn:', e.message);
+  }
+}
+
+// ===== 在线匹配 =====
+function removeFromMatchQueue(socketId) {
+  const i = matchQueue.findIndex(e => e.socketId === socketId);
+  if (i >= 0) matchQueue.splice(i, 1);
+}
+
+function notifyMatchQueue() {
+  matchQueue.forEach(e => { if (e.socket) e.socket.emit('match_update', { queueSize: matchQueue.length }); });
+}
+
+// 满 4 人立即开局；force=true（超时）则用机器人补满后开局
+function tryFormMatch(force) {
+  if (matchQueue.length === 0) return;
+  if (!force && matchQueue.length < 4) return;
+  if (matchTimer) { clearTimeout(matchTimer); matchTimer = null; }
+
+  const humans = matchQueue.splice(0, 4);
+  const players = humans.map(e => ({ socketId: e.socketId, nickname: e.nickname, avatar: e.avatar, isBot: false }));
+  let bi = 0;
+  while (players.length < 4) {
+    players.push({
+      socketId: `bot_match_${Date.now()}_${bi}`,
+      nickname: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
+      avatar: BOT_AVATARS[Math.floor(Math.random() * BOT_AVATARS.length)],
+      isBot: true,
+    });
+    bi++;
+  }
+
+  const room = roomManager.createMatchRoom(players);
+  const roomCode = room.code;
+  room.botDifficulty = 'medium';
+  humans.forEach(e => { if (e.socket) e.socket.join(roomCode); });
+
+  const game = new GameManager(roomCode);
+  const startResult = game.start(room.players.map(p => ({
+    socketId: p.socketId, nickname: p.nickname, avatar: p.avatar || '', isBot: p.isBot || false,
+  })));
+  room.game = game;
+  room.isPlaying = true;
+  broadcastRoomUpdate(roomCode);
+
+  io.to(roomCode).emit('game_start', {
+    phase: 'call', declarerIndex: startResult.declarerIndex,
+    declarerNickname: startResult.declarerNickname, playerCount: 4, isMatch: true,
+  });
+  room.players.forEach((p, i) => {
+    if (!p.isBot) io.to(p.socketId).emit('game_state', Object.assign(game.getGameState(i), { cumulativeScores: room.scores || [0,0,0,0] }));
+  });
+  const declarer = room.players[startResult.declarerIndex];
+  if (declarer && !declarer.isBot) {
+    io.to(declarer.socketId).emit('your_turn_call', { myHand: game.getPlayerHand(startResult.declarerIndex), canCallAny: true });
+  }
+  scheduleBotTurn(roomCode);
 }
 
 // 启动服务器

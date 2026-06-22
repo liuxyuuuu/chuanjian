@@ -4,6 +4,7 @@
 const HAND_TYPE = {
   SINGLE: 'single',           // 单张
   PAIR: 'pair',               // 对子
+  THREE: 'three',             // 三不带（三张同点）
   STRAIGHT: 'straight',       // 顺子（>=3张）
   CONSECUTIVE_PAIRS: 'consecutive_pairs', // 连对（>=2对）
   SWORD_44A: 'sword_44a',     // 44A（剑）
@@ -19,6 +20,7 @@ const HAND_TYPE = {
 const HAND_POWER = {
   [HAND_TYPE.SINGLE]: 1,
   [HAND_TYPE.PAIR]: 2,
+  [HAND_TYPE.THREE]: 3,
   [HAND_TYPE.STRAIGHT]: 3,
   [HAND_TYPE.CONSECUTIVE_PAIRS]: 3,
   [HAND_TYPE.SWORD_44A]: 10,
@@ -28,6 +30,14 @@ const HAND_POWER = {
   [HAND_TYPE.THREE_TWO]: 5,
   [HAND_TYPE.BOMB]: 13,
 };
+
+// 可以跨牌型压制的特殊牌型集合（其余普通牌型只能同型互压）
+const SPECIAL_TYPES = new Set([
+  HAND_TYPE.SWORD_44A,
+  HAND_TYPE.SMALL_THUNDER,
+  HAND_TYPE.BIG_THUNDER,
+  HAND_TYPE.BOMB,
+]);
 
 // 分析一手牌型
 function analyzeHand(cards) {
@@ -68,15 +78,20 @@ function analyzeHand(cards) {
       return { type: HAND_TYPE.BIG_THUNDER, mainValue: 999, length: 3 };
     }
   }
+
+  // 三不带（三张同点，6/Q 已在上面作为雷处理）
+  if (n === 3 && values[0] === values[1] && values[1] === values[2]) {
+    return { type: HAND_TYPE.THREE, mainValue: values[0], length: 3 };
+  }
   
   // 对子
   if (n === 2 && values[0] === values[1]) {
     return { type: HAND_TYPE.PAIR, mainValue: values[0], length: 2 };
   }
   
-  // 炸弹（4张或以上相同点数）
+  // 炸弹（四张同点，且整手都是同点；不支持四带一）
   for (const [val, cnt] of Object.entries(valueCount)) {
-    if (cnt >= 4) {
+    if (cnt >= 4 && cnt === n) {
       return { type: HAND_TYPE.BOMB, mainValue: parseInt(val), length: n, bombCount: cnt };
     }
   }
@@ -169,38 +184,41 @@ function isConsecutiveStraight(ranks, usePairValues) {
 
 // 能否压过上家出的牌
 function canBeat(currentPlay, lastPlay) {
+  // 如果上家没牌（新回合），任何合法牌型都可以出（空值保护必须在解构之前）
+  if (!lastPlay) return true;
+  if (!currentPlay) return false;
+
   const { type: curType, mainValue: curVal, length: curLen } = currentPlay;
   const { type: lastType, mainValue: lastVal, length: lastLen } = lastPlay;
-  
-  // 如果上家没牌（新回合），任何合法牌型都可以出
-  if (!lastPlay) return true;
-  
+
   const curPower = HAND_POWER[curType];
   const lastPower = HAND_POWER[lastType];
-  
-  // 不同牌型大类的比较：特殊牌型可以压普通牌型
-  if (curPower > lastPower) return true;
-  if (curPower < lastPower) return false;
-  
-  // 同一大类牌型
-  if (curType === lastType) {
-    if (curLen === lastLen) {
-      return curVal > lastVal;
-    }
-    // 炸弹：张数多的更大
-    if (curType === HAND_TYPE.BOMB) {
+  if (curPower === undefined || curType === HAND_TYPE.INVALID) return false;
+
+  const curSpecial = SPECIAL_TYPES.has(curType);
+  const lastSpecial = SPECIAL_TYPES.has(lastType);
+
+  // 特殊牌型可以压普通牌型；普通牌型不能压特殊牌型
+  if (curSpecial && !lastSpecial) return true;
+  if (!curSpecial && lastSpecial) return false;
+
+  // 两边都是特殊牌型：按等级比较
+  if (curSpecial && lastSpecial) {
+    if (curPower !== lastPower) return curPower > lastPower;
+    // 同等级：仅炸弹之间比点数（剑/同级雷不可互压）
+    if (curType === HAND_TYPE.BOMB && lastType === HAND_TYPE.BOMB) {
       if (curLen !== lastLen) return curLen > lastLen;
       return curVal > lastVal;
     }
     return false;
   }
-  
-  // 顺子和连对同等级，但类型不同不能互压
-  if (curPower === lastPower && curType !== lastType) {
+
+  // 两边都是普通牌型：必须同类型；顺子/连对还需同长度；按点数比大小
+  if (curType !== lastType) return false;
+  if ((curType === HAND_TYPE.STRAIGHT || curType === HAND_TYPE.CONSECUTIVE_PAIRS) && curLen !== lastLen) {
     return false;
   }
-  
-  return false;
+  return curVal > lastVal;
 }
 
 // 从上家牌推断在出什么牌型，然后判断这手牌是否能接上

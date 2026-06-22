@@ -19,6 +19,14 @@ function initSocket() {
     updateRoomButtons(data.players, data.allReady);
   });
 
+  // 匹配队列人数更新
+  socket.on('match_update', (data) => {
+    var info = document.getElementById('match-info');
+    if (info && data && data.queueSize !== undefined) {
+      info.textContent = '已找到 ' + Math.min(data.queueSize, 4) + '/4 人';
+    }
+  });
+
   // 游戏开始
   var _isQuickAI = false;
 var cardCounts = {};
@@ -29,18 +37,23 @@ function initCardCounter() {
 function updateCardCounter() {
   var items = document.querySelectorAll('#top-counter .counter-item');
   if (!items || items.length === 0) return;
-  // Skip first item (title)
-  var ranks = ['3','2','A','K','Q','J','10','9','8','7','6','5','4'];
-  for (var i = 0; i < ranks.length && i < items.length; i++) {
-    var count = cardCounts[ranks[i]];
-    if (count !== undefined) {
-      var b = items[i].querySelector('b');
-      if (b) items[i].innerHTML = b.outerHTML + 'x' + count;
-    }
+  // 按每个格子自身的牌名取剩余数，和 HTML 排列顺序解耦
+  for (var i = 0; i < items.length; i++) {
+    var b = items[i].querySelector('b');
+    if (!b) continue;
+    var rank = b.textContent.trim();
+    var count = cardCounts[rank];
+    if (count === undefined) count = 4;
+    items[i].innerHTML = b.outerHTML + 'x' + count;
   }
 }
 socket.on('game_start', (data) => {
     window._isQuickAI = data.isQuickAI || false;
+    initCardCounter();
+    updateCardCounter();
+    window._isMatch = data.isMatch || false;
+    var _mo = document.getElementById('match-overlay');
+    if (_mo) _mo.classList.add('hidden');
     UI.showPage('game-page');
     Sound.play('gameStart');
     
@@ -191,25 +204,8 @@ socket.on('game_start', (data) => {
   socket.on('player_passed', (data) => {
     Sound.play('pass');
     Sound.speakEvent('pass');
-    // Show '不出' bubble above the player
-    var seatName = GameUI.getSeatName ? GameUI.getSeatName(data.playerIndex) : null;
-    if (seatName) {
-      var seatEl = document.getElementById('player-' + seatName);
-      if (seatEl) {
-        var bubble = document.createElement('div');
-        bubble.className = 'pass-bubble';
-        bubble.textContent = '不出';
-        seatEl.appendChild(bubble);
-        setTimeout(function(){ if(bubble.parentNode) bubble.remove(); }, 1500);
-      }
-    }
-    // Show "过" in center play area
-    var passEl = document.createElement('div');
-    passEl.textContent = '过';
-    passEl.className = 'pass-indicator';
-    var pc = document.getElementById('play-cards');
-    if (pc) pc.appendChild(passEl);
-    setTimeout(function(){ if(passEl.parentNode) passEl.remove(); }, 1200);
+    // “不出”由各玩家出牌区常驻显示（随 game_state 渲染），
+    // 保留到新一轮第一手牌打出或被该玩家新牌覆盖时才消失。
   });
 
   // 队友揭晓
@@ -252,7 +248,6 @@ function emitCallCard(cardId) {
         GameUI.renderTable(res.myGameState);
         GameUI.isMyTurn = true;
         GameUI.updateActionButtons();
-        GameUI.startCountdown(20);
         Sound.play('yourTurn');
       }
     }

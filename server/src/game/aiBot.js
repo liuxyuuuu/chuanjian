@@ -89,24 +89,32 @@ function findThreePlay(sorted, type, length, minValue) {
  * Get the teammate index if known or inferred with high confidence
  */
 function getEffectiveTeammate(teamTracker, gameState, playerIndex) {
+  // 揭晓后：根据 庄家/队友 直接推出"我的队友"（两队都正确）
+  if (gameState && gameState.teammateRevealed
+      && gameState.declarerIndex !== undefined && gameState.declarerIndex >= 0
+      && gameState.teammateIndex !== undefined && gameState.teammateIndex >= 0) {
+    const declarer = gameState.declarerIndex;
+    const teammate = gameState.teammateIndex;
+    if (playerIndex === declarer) return teammate;
+    if (playerIndex === teammate) return declarer;
+    // 我属于闲家阵营：队友是另一个既非庄家也非帮庄的人
+    for (let i = 0; i < 4; i++) {
+      if (i !== declarer && i !== teammate && i !== playerIndex) return i;
+    }
+    return null;
+  }
+
   if (!teamTracker) return null;
-  
-  // Direct knowledge
+
+  // 直接获知（叫牌已打出）
   if (teamTracker.teammateKnown) return teamTracker.teammateIndex;
-  
-  // Inference
+
+  // 揭晓前：高置信度推断
   const guess = teamTracker.getBestGuess();
   if (guess && guess.confidence >= 70 && guess.teammate !== null) {
     return guess.teammate;
   }
-  
-  // Fallback: use game state if teammate is revealed
-  if (gameState && gameState.teammateRevealed && gameState.teammateIndex !== undefined) {
-    const tmIdx = gameState.teammateIndex;
-    // Only treat as teammate if it's not me
-    if (tmIdx !== playerIndex) return tmIdx;
-  }
-  
+
   return null;
 }
 

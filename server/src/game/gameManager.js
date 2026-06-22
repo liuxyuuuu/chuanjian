@@ -37,10 +37,7 @@ class GameManager {
     this.players.forEach((p, i) => { p.hand = sortCards(hands[i]); });
     const heart4Index = this.players.findIndex(p => p.hand.some(c => c.id === 'H4'));
     this.declarerIndex = heart4Index >= 0 ? heart4Index : 0;
-    if (heart4Index < 0) {
-      this.players[0].hand.push({ id: 'H4', suit: 'H', rank: '4', value: RANK_ORDER['4'], suit_order: 3 });
-      this.players[0].hand = sortCards(this.players[0].hand);
-    }
+    // 满 52 张发牌时红桃4 必被发出；此处仅作防御，不再注入多余牌（避免出现第 14 张）。
     this.seats = [0, 1, 2, 3].map(i => (this.declarerIndex + i) % 4);
     this.phase = PHASE.CALL;
     return { gameId: this.id, declarerIndex: this.declarerIndex, declarerNickname: this.players[this.declarerIndex].nickname, phase: PHASE.CALL };
@@ -70,14 +67,17 @@ class GameManager {
     for (const id of cardIds) { if (!handIds.has(id)) return { success: false, reason: '没有牌 ' + id }; }
     const cards = cardIds.map(id => player.hand.find(c => c.id === id));
     const handAnalysis = analyzeHand(cards);
-    // Track bombs for multiplier
-    if (handAnalysis.type === 'bomb') this.bombCount++;
     if (handAnalysis.type === HAND_TYPE.INVALID) return { success: false, reason: '无效牌型' };
     if (this.lastPlay && !canBeat(handAnalysis, this.lastPlay.handAnalysis)) return { success: false, reason: '管不上' };
+    // 校验通过、确定本次出牌生效后再累加炸弹倍数（避免被拒绝的出牌污染倍数）
+    if (handAnalysis.type === HAND_TYPE.BOMB) this.bombCount++;
     let teammateJustRevealed = false;
     const calledCardPlayed = cards.some(c => c.id === this.calledCardId);
     if (calledCardPlayed && !this.teammateRevealed) { this.teammateRevealed = true; teammateJustRevealed = true; }
     player.hand = removeCards(player.hand, cardIds);
+    // 新一轮的第一手牌打出时，才清空上一轮所有人的出牌区（含“不出”标记），
+    // 让出牌/过牌的显示规则一致：保留到本轮重置或被新牌覆盖。
+    if (this.lastPlay === null) this.lastPlays = [null, null, null, null];
     this.lastPlay = { playerIndex, cards: cards.map(c => c.id), handAnalysis };
     this.lastPlays[playerIndex] = { cards: cards.map(c => c.id), handAnalysis };
     this.lastActiveIndex = playerIndex;
@@ -142,10 +142,13 @@ class GameManager {
     if (playerIndex !== this.currentTurnIndex) return { success: false, reason: '不是你的回合' };
     if (!this.lastPlay) return { success: false, reason: '你是本轮第一个出牌，不能过' };
     this.passCount++;
+    // 记录“不出”，让该玩家的出牌区像出牌一样保留到本轮重置
+    this.lastPlays[playerIndex] = { passed: true };
     var activePlayers = this.players.filter(function(p){ return !p.finished; }).length;
     if (this.passCount >= Math.max(1, activePlayers - 1)) {
       this.lastPlay = null;
-      this.lastPlays = [null, null, null, null];
+      // 不在此刻清空 lastPlays：保留所有人的出牌/“不出”标记，
+      // 直到新一轮第一手牌打出时（playCards 中）再统一清空。
       this.passCount = 0;
       this.currentTurnIndex = this.lastActiveIndex;
       // 接风: teammate gets lead only if revealed, otherwise order
@@ -214,10 +217,11 @@ class GameManager {
       })),
       declarerIndex: this.declarerIndex,
       currentTurn: this.currentTurnIndex,
+      teammateIndex: this.teammateRevealed ? this.teammateIndex : undefined,
       lastPlay: this.lastPlay ? { playerIndex: this.lastPlay.playerIndex, cards: this.lastPlay.cards, handAnalysis: this.lastPlay.handAnalysis } : null,
       passCount: this.passCount,
       teammateRevealed: this.teammateRevealed,
-      lastPlays: this.lastPlays.map(lp => lp ? { cards: lp.cards, handAnalysis: lp.handAnalysis } : null),
+      lastPlays: this.lastPlays.map(lp => lp ? { cards: lp.cards, handAnalysis: lp.handAnalysis, passed: lp.passed } : null),
       calledCard: this.calledCardId,
       bombCount: this.bombCount,
       finishOrder: this.finishOrder.length > 0 ? [...this.finishOrder] : null,

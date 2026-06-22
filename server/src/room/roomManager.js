@@ -108,7 +108,29 @@ class RoomManager {
       this.socketRooms.delete(socketId);
       return null;
     }
-    
+
+    // 对局进行中：不要删除/重排玩家（否则 game.players 与 room.players 索引错位）。
+    // 改为标记断线并保留座位，由服务器机器人逻辑接管该座位继续推进。
+    if (room.isPlaying && room.game) {
+      const dp = room.players.find(x => x.socketId === socketId);
+      this.socketRooms.delete(socketId);
+      if (dp) {
+        dp.connected = false;
+        dp.disconnected = true;
+      }
+      const anyConnectedHuman = room.players.some(x => !x.isBot && x.connected !== false);
+      if (!anyConnectedHuman) {
+        room.players.forEach(x => this.socketRooms.delete(x.socketId));
+        this.rooms.delete(roomCode);
+        return { roomCode, action: 'room_deleted', players: [] };
+      }
+      return {
+        roomCode,
+        action: 'player_disconnected_ingame',
+        players: room.players.map(this._sanitizePlayer),
+      };
+    }
+
     // 移除玩家或机器人
     room.players = room.players.filter(p => p.socketId !== socketId);
     // 更新索引

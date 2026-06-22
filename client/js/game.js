@@ -11,6 +11,7 @@ const GameUI = {
   lastPlayCards: [],
   _countdownTimer: null,
   _countdownSec: 0,
+  _timerTurn: -1,
   _avatars: [],
   _seats: ['player-bottom', 'player-right', 'player-top', 'player-left'],
 
@@ -32,15 +33,6 @@ const GameUI = {
     return this._seats[idx] || 'player-bottom';
   },
 
-  moveActionBarToTop() {
-    const bar = document.getElementById('action-bar');
-    const timer = document.getElementById('game-timer');
-    const container = document.querySelector('.game-container');
-    if (bar && timer && container && bar.parentNode === container) {
-      container.insertBefore(bar, timer);
-    }
-  },
-
   getSeatName(playerIndex) {
     const idx = this.seatOrder.indexOf(playerIndex);
     return ['bottom', 'right', 'top', 'left'][idx] || 'bottom';
@@ -55,9 +47,6 @@ const GameUI = {
 
     if (!this.seatOrder.length) this.initSeats(this.myIndex);
 
-    // Move action bar above hand area
-    this.moveActionBarToTop();
-
     // Render four seats
     this.players.forEach((p, i) => {
       const seat = this.getSeatForPlayerIndex(i);
@@ -69,7 +58,9 @@ const GameUI = {
       this.renderPlayerLastPlay(i, this.getSeatName(i));
 
       const nameEl = seatEl.querySelector('.player-name');
-      const countEl = seatEl.querySelector('.player-card-count');
+      const scoreEl = seatEl.querySelector('.score-val');
+      const countBackEl = seatEl.querySelector('.count-back');
+      const countNumEl = seatEl.querySelector('.count-num');
       const badgeEl = seatEl.querySelector('.player-badge');
       const avatarEl = seatEl.querySelector('.player-avatar');
 
@@ -105,15 +96,21 @@ const GameUI = {
         }
       }
 
-      if (nameEl) {
+      // 昵称
+      if (nameEl) nameEl.textContent = p.nickname;
+      // 积分（暂用本局累计积分，联机版再换成铜钱）
+      if (scoreEl) {
         const sc = (this.gameState?.cumulativeScores || [0,0,0,0])[i] || 0;
-        nameEl.textContent = p.nickname + (sc !== 0 ? ` [${sc > 0 ? '+' : ''}${sc}]` : '');
+        scoreEl.textContent = '积分 ' + (sc > 0 ? '+' + sc : sc);
       }
-      if (countEl) {
+      // 牌背 + 剩余张数（自己没有牌背元素）
+      if (countBackEl && countNumEl) {
         if (p.finished) {
-          countEl.textContent = `✓ 第${p.finishPosition}名`;
+          countBackEl.classList.add('is-finished');
+          countNumEl.textContent = '#' + p.finishPosition;
         } else {
-          countEl.textContent = `剩${p.cardCount}张`;
+          countBackEl.classList.remove('is-finished');
+          countNumEl.textContent = p.cardCount;
         }
       }
 
@@ -138,22 +135,12 @@ const GameUI = {
       }
     });
 
-    // Play area
-    if (gameState.lastPlay) {
-      this.renderPlayArea(gameState.lastPlay);
-    } else {
-      document.getElementById('play-cards').innerHTML = '';
-    }
-
+    // 各玩家出牌区已在上面的座位循环里通过 renderPlayerLastPlay 渲染（含“不出”）
     this.renderHand();
     this.updateActionButtons();
 
-    // Countdown
-    if (this.isMyTurn && gameState.phase === 'playing') {
-      this.startCountdown(20);
-    } else {
-      this.stopCountdown();
-    }
+    // 出牌指向 + 倒计时（指向当前出牌玩家，并在圈内显示倒计时秒数）
+    this.updateTurnIndicator(gameState);
 
     // Status text
     const statusEl = document.getElementById('game-status-text');
@@ -177,23 +164,23 @@ const GameUI = {
 
     const lastPlays = this.gameState?.lastPlays;
     if (!lastPlays) return;
-
     const lp = lastPlays[playerIndex];
-    if (!lp || !lp.cards || lp.cards.length === 0) return;
+    if (!lp) return;
 
-    // Add hand type label per-seat
-    if (lp.handAnalysis && lp.handAnalysis.type) {
-      const typeLabel = document.createElement('div');
-      typeLabel.className = 'played-label';
-      typeLabel.textContent = UI.getHandName(lp.handAnalysis.type);
-      container.appendChild(typeLabel);
+    // 要不起：显示“不出”占位（和出的牌一样保留到本轮重置）
+    if (lp.passed) {
+      const mark = document.createElement('div');
+      mark.className = 'pass-mark';
+      mark.textContent = '不出';
+      container.appendChild(mark);
+      return;
     }
 
+    if (!lp.cards || lp.cards.length === 0) return;
     lp.cards.forEach(cardId => {
       const suit = cardId[0];
       const rank = cardId.slice(1);
       const el = UI.renderCardElement({ suit, rank });
-      el.style.cssText = 'width:30px;height:40px;font-size:0.7rem;margin:0 2px;';
       container.appendChild(el);
     });
   },
@@ -202,7 +189,7 @@ const GameUI = {
     if (playerIndex === this.myIndex) return;
     const seatName = this.getSeatName(playerIndex);
     const seatEl = document.getElementById(`player-${seatName}`);
-    const targetEl = document.getElementById("played-${seatName}");
+    const targetEl = document.getElementById('played-' + seatName);
     if (!seatEl || !targetEl) return;
 
     const src = seatEl.getBoundingClientRect();
@@ -247,6 +234,16 @@ const GameUI = {
       const labelSpan = document.createElement('span');
       labelSpan.textContent = rank;
       display.appendChild(labelSpan);
+      // 显示是哪位玩家（庄家）叫的牌
+      const labelEl = bar.querySelector('.called-card-label');
+      if (labelEl) {
+        let declarerName = '庄家';
+        const di = gameState.declarerIndex;
+        if (gameState.players && di !== undefined && di >= 0 && gameState.players[di]) {
+          declarerName = gameState.players[di].nickname || '庄家';
+        }
+        labelEl.textContent = '庄家 ' + declarerName + ' 叫 · ';
+      }
       bar.classList.remove('hidden');
     } else {
       bar.classList.add('hidden');
@@ -255,6 +252,7 @@ const GameUI = {
 
   renderPlayArea(lastPlay) {
     const area = document.getElementById('play-cards');
+    if (!area) return;
     area.innerHTML = '';
     if (!lastPlay || !lastPlay.cards) return;
 
@@ -403,7 +401,7 @@ const GameUI = {
 
   showTeammateReveal(data) {
     // Find the avatar element
-    const playerIdx = data.teammateIndex;
+    let playerIdx = data.teammateIndex;
     if (playerIdx === undefined) playerIdx = this.players.findIndex(p => p.nickname === data.teammateNickname);
     if (playerIdx >= 0) {
       const seat = this.getSeatForPlayerIndex(playerIdx);
@@ -522,20 +520,52 @@ const GameUI = {
     }
   },
 
+  // 出牌指向 + 倒计时：把牌桌中央的计时圈指向当前出牌玩家，并在圈内显示秒数。
+  // 计时圈的显隐与倒计时均由本方法统一驱动（每切换到新出牌者才重置秒数）。
+  updateTurnIndicator(gs) {
+    const circle = document.getElementById('timer-circle');
+    if (!circle) return;
+    const wrap = document.getElementById('turn-pointer-wrap');
+    const ct = gs ? gs.currentTurn : -1;
+    const active = gs && gs.phase === 'playing' && ct >= 0 &&
+      gs.players && gs.players[ct] && !gs.players[ct].finished;
+    if (!active) {
+      circle.style.display = 'none';
+      circle.classList.remove('me');
+      this.stopCountdown();
+      this._timerTurn = -1;
+      return;
+    }
+    circle.style.display = 'flex';
+    if (wrap) {
+      const seat = this.getSeatName(ct); // bottom / right / top / left
+      const degMap = { top: 0, right: 90, bottom: 180, left: 270 };
+      const deg = degMap[seat] !== undefined ? degMap[seat] : 180;
+      wrap.style.transform = 'rotate(' + deg + 'deg)';
+    }
+    circle.classList.toggle('me', ct === this.myIndex);
+    // 只有切换到新的出牌者时才重置秒数，避免同一回合内多次 game_state 把秒数刷回 20
+    if (this._timerTurn !== ct) {
+      this._timerTurn = ct;
+      this.startCountdown(20);
+    }
+  },
+
   startCountdown(seconds) {
     this.stopCountdown();
     this._countdownSec = seconds;
     const timerEl = document.getElementById('game-timer');
     if (!timerEl) return;
-    var tc = document.querySelector('.timer-circle');
-    if (tc) tc.style.display = 'flex';
     timerEl.textContent = seconds;
-    timerEl.style.display = 'block';
+    timerEl.classList.remove('urgent');
     this._countdownTimer = setInterval(() => {
       this._countdownSec--;
-        if (this._countdownSec <= 0) {
-        this.stopCountdown();
-        // Auto-play or pass on timeout
+      if (this._countdownSec <= 0) {
+        clearInterval(this._countdownTimer);
+        this._countdownTimer = null;
+        const t2 = document.getElementById('game-timer');
+        if (t2) { t2.textContent = '0'; t2.classList.add('urgent'); }
+        // 只有自己回合到点才自动出/过（其他玩家由服务端/机器人推进）
         if (this.isMyTurn && this.myHand.length > 0) {
           if (this.gameState && this.gameState.lastPlay && typeof emitPass === 'function') {
             emitPass();
@@ -549,12 +579,11 @@ const GameUI = {
             }
           }
         }
-        timerEl.textContent = '超时';
-        timerEl.className = 'game-timer-center urgent';
         return;
       }
       timerEl.textContent = this._countdownSec;
-      timerEl.className = 'game-timer-center' + (this._countdownSec <= 5 ? ' urgent' : '');
+      if (this._countdownSec <= 5) timerEl.classList.add('urgent');
+      else timerEl.classList.remove('urgent');
     }, 1000);
   },
 
@@ -563,10 +592,9 @@ const GameUI = {
       clearInterval(this._countdownTimer);
       this._countdownTimer = null;
     }
-    var tc = document.querySelector('.timer-circle');
-    if (tc) tc.style.display = 'none';
+    // 计时圈显隐由 updateTurnIndicator 统一控制，这里只清空数字。
     const timerEl = document.getElementById('game-timer');
-    if (timerEl) { timerEl.textContent = ''; timerEl.style.display = 'none'; }
+    if (timerEl) { timerEl.textContent = ''; timerEl.classList.remove('urgent'); }
   },
 
   hideResult() {
@@ -575,6 +603,9 @@ const GameUI = {
 
   reset() {
     this.stopCountdown();
+    const circle = document.getElementById('timer-circle');
+    if (circle) { circle.style.display = 'none'; circle.classList.remove('me'); }
+    this._timerTurn = -1;
     this.myIndex = -1;
     this.players = [];
     this.myHand = [];
@@ -585,8 +616,11 @@ const GameUI = {
     this.calledCardId = null;
     this.lastPlayCards = [];
     this._avatars = [];
-    document.getElementById('play-cards').innerHTML = '';
-    document.getElementById('hand-cards').innerHTML = '';
+    const playCards = document.getElementById('play-cards');
+    if (playCards) playCards.innerHTML = '';
+    const handCards = document.getElementById('hand-cards');
+    if (handCards) handCards.innerHTML = '';
+    document.querySelectorAll('.seat-played').forEach(el => { el.innerHTML = ''; });
     document.querySelectorAll('.player-badge').forEach(el => { el.className = 'player-badge'; });
     document.querySelectorAll('.player-avatar').forEach(el => {
       el.classList.remove('teammate-revealed');

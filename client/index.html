@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <title>穿剑 - 四人国风棋牌</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=1781944700000">
 </head>
 <body>
   <!-- ===== 大厅页面 ===== -->
@@ -117,6 +117,7 @@
       <!-- Card counter -->
       <div class="top-counter" id="top-counter">
         <span class="counter-title">剩余牌</span>
+        <span class="counter-item"><b>3</b>x4</span>
         <span class="counter-item"><b>2</b>x4</span>
         <span class="counter-item"><b>A</b>x4</span>
         <span class="counter-item"><b>K</b>x4</span>
@@ -128,7 +129,6 @@
         <span class="counter-item"><b>7</b>x4</span>
         <span class="counter-item"><b>6</b>x4</span>
         <span class="counter-item"><b>5</b>x4</span>
-        <span class="counter-item"><b>3</b>x4</span>
         <span class="counter-item"><b>4</b>x4</span>
       </div>
       <div class="game-top-bar">
@@ -139,74 +139,85 @@
       
       <!-- 游戏桌面 -->
       <div class="game-table" id="game-table">
-        <!-- 对家（上家） -->
+        <!-- 对家（上, 居中） -->
         <div class="player-seat top" id="player-top">
-          <div class="player-info">
+          <div class="seat-row">
             <span class="player-avatar"></span>
-            <span class="player-name"></span>
-            <span class="player-card-count"></span>
+            <div class="seat-meta">
+              <span class="player-name"></span>
+              <span class="score-chip"><b class="score-val"></b></span>
+            </div>
+            <span class="count-back"><b class="count-num"></b></span>
           </div>
           <div class="player-badge"></div>
-          <div class="played-cards" id="played-top"></div>
         </div>
-        
-        <!-- 中间行：左 + 中央 + 右 -->
+        <!-- 对家出牌区 -->
+        <div class="played-cards seat-played" id="played-top"></div>
+
+        <!-- 中间行：上家 + 中央 + 下家 -->
         <div class="table-middle">
-          <!-- 左家 -->
+          <!-- 上家（左） -->
           <div class="player-seat left" id="player-left">
-            <div class="player-info">
+            <div class="seat-row">
               <span class="player-avatar"></span>
+              <span class="count-back"><b class="count-num"></b></span>
+            </div>
+            <div class="seat-meta">
               <span class="player-name"></span>
-              <span class="player-card-count"></span>
+              <span class="score-chip"><b class="score-val"></b></span>
             </div>
             <div class="player-badge"></div>
-            <div class="played-cards" id="played-left"></div>
           </div>
-          
-          <!-- 中央出牌区 -->
-          <div class="play-area" id="play-area">
-            <div class="play-area-label">出牌区</div>
-            <div class="play-cards" id="play-cards"></div>
-          </div>
-          
-          <!-- 右家 -->
+          <!-- 上家出牌区 -->
+          <div class="played-cards seat-played" id="played-left"></div>
+          <!-- 中央 -->
+          <div class="table-center"></div>
+          <!-- 下家出牌区 -->
+          <div class="played-cards seat-played" id="played-right"></div>
+          <!-- 下家（右） -->
           <div class="player-seat right" id="player-right">
-            <div class="player-info">
+            <div class="seat-row">
+              <span class="count-back"><b class="count-num"></b></span>
               <span class="player-avatar"></span>
+            </div>
+            <div class="seat-meta">
               <span class="player-name"></span>
-              <span class="player-card-count"></span>
+              <span class="score-chip"><b class="score-val"></b></span>
             </div>
             <div class="player-badge"></div>
-            <div class="played-cards" id="played-right"></div>
           </div>
         </div>
-        
-        <!-- 自己（下手） -->
-        <div class="player-seat bottom" id="player-bottom">
-          <div class="player-info">
-            <span class="player-avatar"></span>
-            <span class="player-name"></span>
-            <span class="player-card-count"></span>
-          </div>
-          <div class="player-badge"></div>
+
+        <!-- 自己出牌区（中央底部） -->
+        <div class="played-cards seat-played self-played" id="played-bottom"></div>
+
+        <!-- 倒计时 + 出牌指向（位于牌桌中央，箭头指向当前出牌玩家） -->
+        <div class="timer-circle" id="timer-circle">
+          <div class="turn-pointer-wrap" id="turn-pointer-wrap"><span class="turn-pointer"></span></div>
+          <span id="game-timer" class="timer-text"></span>
         </div>
       </div>
-      
-      <!-- 倒计时 -->
-      <div class="timer-circle"><span id="game-timer" class="timer-text">20</span></div>
+
+      <!-- 操作按钮（手牌上方：提示 / 不出 / 出牌） -->
+      <div class="action-bar" id="action-bar">
+        <button id="action-hint" class="action-btn btn-hint" onclick="showHint()">提示</button>
+        <button id="action-pass" class="action-btn btn-pass" onclick="passTurn()">不出</button>
+        <button id="action-play" class="action-btn btn-play" onclick="playSelected()">出牌</button>
+      </div>
 
       <!-- 手牌区域 -->
       <div class="hand-area" id="hand-area">
         <div class="hand-cards" id="hand-cards"></div>
       </div>
-      
-      <!-- 操作按钮 -->
-      <div class="action-bar" id="action-bar">
-        <button id="action-pass" class="action-btn btn-pass" onclick="passTurn()">不出</button>
-        <button id="action-play" class="action-btn btn-play" onclick="playSelected()">出牌</button>
-        <button id="action-hint" class="action-btn btn-hint" onclick="showHint()">提示</button>
+
+      <!-- 自己信息（手牌下方） -->
+      <div class="player-seat bottom self-bar" id="player-bottom">
+        <span class="player-avatar"></span>
+        <div class="player-badge"></div>
+        <span class="player-name name-box"></span>
+        <span class="score-chip score-box"><b class="score-val"></b></span>
       </div>
-      
+
       <!-- 叫牌界面 -->
       <div id="call-overlay" class="overlay hidden">
         <div class="overlay-content">
@@ -297,9 +308,9 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="js/ui.js?v=1781944141086"></script>
-  <script src="js/game.js?v=1781944141086"></script>
-  <script src="js/socket.js?v=1781944141086"></script>
-  <script src="js/app.js?v=1781944141086"></script>
+<script src="js/ui.js?v=1781944700000"></script>
+<script src="js/game.js?v=1781944700000"></script>
+<script src="js/socket.js?v=1781944700000"></script>
+<script src="js/app.js?v=1781944700000"></script>
 </body>
 </html>
