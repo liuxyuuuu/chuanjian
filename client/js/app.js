@@ -311,15 +311,22 @@ function startOnlineMatch() {
   window._isMatch = true;
   document.getElementById("match-overlay").classList.remove("hidden");
   document.getElementById("match-timer").textContent = "10";
-  document.getElementById("match-info").textContent = "已找到 1/4 人";
-  var timer = setInterval(function(){
-    var t = parseInt(document.getElementById("match-timer").textContent);
-    if (t <= 0) { clearInterval(timer); return; }
-    document.getElementById("match-timer").textContent = t - 1;
+  document.getElementById("match-info").textContent = "匹配中…";
+  if (window._matchCountdown) { clearInterval(window._matchCountdown); window._matchCountdown = null; }
+  var secondsLeft = 10;
+  window._matchCountdown = setInterval(function(){
+    secondsLeft--;
+    var timerEl = document.getElementById("match-timer");
+    if (timerEl) timerEl.textContent = secondsLeft;
+    if (secondsLeft <= 0) {
+      clearInterval(window._matchCountdown);
+      window._matchCountdown = null;
+    }
   }, 1000);
   socket.emit("quick_match", { nickname: nick, avatar: av }, function(res){
     if (res && !res.success) {
-      clearInterval(timer);
+      clearInterval(window._matchCountdown);
+      window._matchCountdown = null;
       document.getElementById("match-overlay").classList.add("hidden");
       UI.showToast(res.reason || "匹配失败");
       return;
@@ -329,15 +336,11 @@ function startOnlineMatch() {
     }
   });
 }
-
 function cancelMatch() {
+  if (window._matchCountdown) { clearInterval(window._matchCountdown); window._matchCountdown = null; }
   document.getElementById("match-overlay").classList.add("hidden");
   socket.emit("cancel_match");
 }
-
-
-// Settings
-
 function toggleSettings() {
   var el = document.getElementById('settings-overlay');
   el.classList.toggle('hidden');
@@ -350,26 +353,7 @@ function setVolume(val) {
   if (Sound.setVolume) Sound.setVolume(val);
   localStorage.setItem('chuanjian_volume', val);
 }
-function toggleOrientation() {
-  var btn = document.getElementById('orient-btn');
-  var isLandscape = screen.orientation ? screen.orientation.type.startsWith('landscape') : false;
-  var wantLandscape = !isLandscape;
-  if (wantLandscape) {
-    var el = document.documentElement;
-    if (el.requestFullscreen) el.requestFullscreen().catch(function(){});
-    if (screen.orientation && screen.orientation.lock) {
-      screen.orientation.lock('landscape').catch(function(){});
-    }
-    localStorage.setItem('chuanjian_orient', 'landscape');
-    btn.textContent = '横屏';
-  } else {
-    if (document.fullscreenElement) document.exitFullscreen().catch(function(){});
-    if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
-    localStorage.setItem('chuanjian_orient', 'portrait');
-    btn.textContent = '竖屏';
-  }
-  UI.showToast(wantLandscape ? '横屏模式' : '竖屏模式');
-}
+
 
 // Init volume from localStorage
 (function(){

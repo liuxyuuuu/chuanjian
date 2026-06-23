@@ -1,17 +1,21 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <title>穿剑 - 四人国风棋牌</title>
-  <link rel="stylesheet" href="css/style.css?v=1781944800000">
+  <link rel="stylesheet" href="css/style.css?v=1782231134">
 </head>
 <body>
   <!-- ===== 大厅页面 ===== -->
   <div id="lobby-page" class="page active">
     <div class="lobby-container">
-      <div class="game-title">
+      <div class="lobby-top-left" style="position:fixed;top:16px;left:12px;z-index:130;display:flex;gap:8px">
+      <button class="btn small ghost" onclick="toggleSettings()" style="font-size:0.78rem">⚙ 设置</button>
+      <button id="lobby-logout-btn" class="btn small ghost" onclick="Account.logout()" style="font-size:0.78rem;display:none">退出</button>
+    </div>
+    <div class="game-title">
         <h1>穿剑</h1>
         <p class="subtitle">四人暗牌 · 剑出盟现</p>
       <button class="btn rules-btn small ghost" onclick="toggleRules()">📖 规则</button>
@@ -241,6 +245,7 @@
     <div class="overlay-content result-content">
       <h3 id="result-title">游戏结束</h3>
       <div id="result-details"></div>
+      <div id="result-gold" style="text-align:center;margin:6px 0;font-size:0.9rem;color:var(--gold)"></div>
       <div class="result-buttons"><button class="btn primary" onclick="playAgain()">再来一局</button><button class="btn outline" onclick="backToLobby()" style="margin-left:8px">返回主界面</button></div>
     </div>
   </div>
@@ -254,6 +259,7 @@
     <div class="overlay-content" style="text-align:center">
       <h3>在线匹配中…</h3>
       <div style="font-size:2.2rem;color:var(--gold);margin:8px 0"><span id="match-timer">10</span>s</div>
+      <div id="match-info" class="match-info" style="color:rgba(200,200,200,0.6);margin:8px 0">匹配中…</div>
       <p id="match-info" class="acc-muted">已找到 1/4 人</p>
       <p class="acc-muted" style="font-size:.75rem">超时将由电脑玩家补位</p>
       <button class="btn outline" onclick="cancelMatch()">取消</button>
@@ -294,10 +300,7 @@
         <span class="setting-label">🔊 音量</span>
         <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="setVolume(this.value/100)">
       </div>
-      <div class="setting-row">
-        <span class="setting-label">📐 屏幕方向</span>
-        <button id="orient-btn" class="btn small outline" onclick="toggleOrientation()">横屏</button>
-      </div>
+      
       <button class="btn primary" onclick="closeSettings()" style="margin-top:10px">关闭</button>
     </div>
   </div>
@@ -330,10 +333,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-<script src="js/ui.js?v=1781944800000"></script>
-<script src="js/account.js?v=1781944800000"></script>
-<script src="js/game.js?v=1781944800000"></script>
-<script src="js/socket.js?v=1781944800000"></script>
-<script src="js/app.js?v=1781944800000"></script>
+<script src="js/ui.js?v=1782231134"></script>
+<script src="js/account.js?v=1782231134"></script>
+<script src="js/game.js?v=1782231134"></script>
+<script src="js/socket.js?v=1782231134"></script>
+<script src="js/app.js?v=1782231134"></script>
 </body>
 </html>

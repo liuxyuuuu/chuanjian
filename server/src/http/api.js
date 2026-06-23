@@ -32,7 +32,27 @@ function buildRouter() {
 
   // 公共配置：前端据此决定显示哪种登录
   router.get('/config', (req, res) => {
-    res.json({ wechatEnabled: config.wechat.enabled, allowDevLogin: config.allowDevLogin });
+    res.json({ wechatEnabled: false, allowDevLogin: false, registerMode: true });
+  });
+
+  // 注册（纯数字 8-10 位 ID + 密码）：注册成功即登录
+  router.post('/auth/register', (req, res) => {
+    const { loginId, password } = req.body || {};
+    const r = accounts.register({ loginId, password });
+    if (!r.ok) return res.json({ success: false, reason: r.reason });
+    tasks.onLogin(r.player.id);
+    const token = sessions.issue(r.player.id);
+    res.json({ success: true, token, player: meView(accounts.getById(r.player.id)) });
+  });
+
+  // 登录（ID + 密码）
+  router.post('/auth/login', (req, res) => {
+    const { loginId, password } = req.body || {};
+    const r = accounts.loginWithPassword({ loginId, password });
+    if (!r.ok) return res.json({ success: false, reason: r.reason });
+    tasks.onLogin(r.player.id);
+    const token = sessions.issue(r.player.id);
+    res.json({ success: true, token, player: meView(accounts.getById(r.player.id)) });
   });
 
   // 开发模拟登录（生产可关闭）
@@ -77,6 +97,13 @@ function buildRouter() {
   router.post('/logout', authMiddleware, (req, res) => {
     sessions.revoke(req.token);
     res.json({ success: true });
+  });
+
+  // 更新资料（昵称/头像）
+  router.post('/profile', authMiddleware, (req, res) => {
+    const { nickname, avatar } = req.body || {};
+    accounts.setProfile(req.player.id, { nickname, avatar });
+    res.json({ success: true, player: meView(accounts.getById(req.player.id)) });
   });
 
   router.get('/announcements', (req, res) => {

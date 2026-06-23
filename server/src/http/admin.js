@@ -57,14 +57,14 @@ function buildRouter(deps) {
     let where = '';
     let params = [];
     if (q) {
-      where = 'WHERE nickname LIKE ? OR openid LIKE ? OR unionid LIKE ? OR CAST(id AS TEXT) = ?';
-      params = [`%${q}%`, `%${q}%`, `%${q}%`, q];
+      where = 'WHERE nickname LIKE ? OR login_id LIKE ? OR CAST(id AS TEXT) = ?';
+      params = [`%${q}%`, `%${q}%`, q];
     }
     const total = db.prepare(`SELECT COUNT(*) AS c FROM players ${where}`).get(...params).c;
     const rows = db.prepare(`SELECT * FROM players ${where} ORDER BY id DESC LIMIT ? OFFSET ?`).all(...params, size, offset);
     const list = rows.map(p => ({
       id: p.id, nickname: p.nickname, avatar: p.avatar,
-      openid: p.openid, unionid: p.unionid, devKey: p.dev_key,
+      loginId: p.login_id || '',
       gold: p.gold, counterSeconds: p.counter_seconds,
       wins: p.wins, games: p.games, banned: !!p.banned,
       online: presence.isOnline(p.id),

@@ -43,7 +43,7 @@
     },
 
     async init() {
-      // 先确定 token（微信回调 URL 优先），便于 socket 尽早带令牌握手
+      // 先确定 token，便于 socket 尽早带令牌握手
       const m = location.search.match(/[?&]token=([^&]+)/);
       if (m) {
         this.token = decodeURIComponent(m[1]);
@@ -52,7 +52,7 @@
       } else {
         this.token = localStorage.getItem(LS_TOKEN) || '';
       }
-      try { this.config = await this.api('/config'); } catch (e) {}
+      try { this.config = await this.api('/config'); } catch (e) { this.config = { registerMode: true }; }
       this.injectStyles();
       this.buildBar();
       this.buildLoginOverlay();
@@ -93,7 +93,7 @@
       if (document.getElementById('acc-styles')) return;
       const s = document.createElement('style'); s.id = 'acc-styles';
       s.textContent = `
-      #acc-bar{position:fixed;top:8px;right:8px;z-index:120;display:flex;gap:6px;align-items:center;font-family:'ZCOOL XiaoWei',serif}
+      #acc-bar{position:fixed;top:20px;right:8px;z-index:120;display:flex;gap:6px;align-items:center;font-family:'ZCOOL XiaoWei',serif}
       #acc-bar .gold{background:rgba(0,0,0,0.45);color:#ffd34d;border:1px solid rgba(255,210,80,.4);border-radius:14px;padding:3px 10px;font-weight:700;font-size:.82rem}
       #acc-bar .ab{background:rgba(0,0,0,0.4);color:#ffe9b0;border:1px solid rgba(255,210,120,.3);border-radius:12px;padding:3px 8px;font-size:.8rem;cursor:pointer;position:relative}
       #acc-bar .ab .dot{position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:#e74c3c}
@@ -130,6 +130,8 @@
       const bar = document.getElementById('acc-bar'); if (!bar) return;
       const onLobby = !!(document.getElementById('lobby-page') && document.getElementById('lobby-page').classList.contains('active'));
       bar.style.display = (this.player && onLobby) ? 'flex' : 'none';
+  const lobbyLogout = document.getElementById("lobby-logout-btn");
+  if (lobbyLogout) lobbyLogout.style.display = this.player ? "inline-flex" : "none";
       const g = document.getElementById('acc-gold'); if (g && this.player) g.textContent = '🪙 ' + this.player.gold;
       const dot = document.getElementById('acc-mail-dot'); if (dot && this.player) dot.style.display = this.player.unreadMail > 0 ? 'block' : 'none';
     },

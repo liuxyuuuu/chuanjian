@@ -495,13 +495,31 @@ const GameUI = {
     // Gold update for online matches
     if (window._isMatch) {
       var goldChange = 0;
-      if (myTeamScore > 0) goldChange = 10;
-      else if (myTeamScore < 0) goldChange = -10;
+      var myPos = -1;
+      if (result.finishOrder) {
+        myPos = result.finishOrder.indexOf(this.myIndex) + 1;
+      }
+      if (myTeamScore > 0) {
+        var team1Positions = (result.team1 || []).map(function(ti) { return (result.finishOrder || []).indexOf(ti) + 1; });
+        var team2Positions = ((result.team2) || []).map(function(ti) { return (result.finishOrder || []).indexOf(ti) + 1; });
+        var myTeamPositions = team1Positions.includes(myPos) ? team1Positions : team2Positions;
+        if (myTeamPositions.includes(1) && myTeamPositions.includes(2)) {
+          goldChange = 2000;
+        } else {
+          goldChange = 1000;
+        }
+      } else if (myTeamScore < 0) {
+        var t1p = (result.team1 || []).map(function(ti) { return (result.finishOrder || []).indexOf(ti) + 1; });
+        var t2p = ((result.team2) || []).map(function(ti) { return (result.finishOrder || []).indexOf(ti) + 1; });
+        var oppPositions = t1p.includes(1) ? t1p : t2p;
+        if (oppPositions.includes(1) && oppPositions.includes(2)) goldChange = -2000;
+        else goldChange = -1000;
+      }
       var goldDiv = document.getElementById('result-gold');
       if (goldDiv) {
-        if (goldChange > 0) goldDiv.textContent = '🪙 +' + goldChange + ' 金币';
-        else if (goldChange < 0) goldDiv.textContent = '🪙 ' + goldChange + ' 金币';
-        else goldDiv.textContent = '';
+        if (goldChange > 0) goldDiv.textContent = '💰 +' + goldChange + ' 金币';
+        else if (goldChange < 0) goldDiv.textContent = '💰 ' + goldChange + ' 金币';
+        else goldDiv.textContent = '金币 +0';
       }
       if (typeof updateGold === 'function' && goldChange !== 0) {
         updateGold(goldChange);

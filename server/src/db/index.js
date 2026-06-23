@@ -123,4 +123,19 @@ function migrate() {
 
 migrate();
 
+// 注册模式新增列（幂等）：login_id（纯数字玩家ID）+ pwd_hash
+function ensureColumn(table, col, type) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!cols.some(c => c.name === col)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
+  }
+}
+try {
+  ensureColumn('players', 'login_id', 'TEXT');
+  ensureColumn('players', 'pwd_hash', 'TEXT');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_players_login_id ON players(login_id) WHERE login_id IS NOT NULL');
+} catch (e) {
+  console.log('[db] migrate login_id failed:', e.message);
+}
+
 module.exports = { db, migrate };

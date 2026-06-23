@@ -16,6 +16,7 @@ const sessions = require('./services/sessions');
 const adminsSvc = require('./services/admins');
 const presence = require('./services/presence');
 const tasks = require('./services/tasks');
+const botPool = require('./services/botPool');
 const apiRouter = require('./http/api');
 const adminRouter = require('./http/admin');
 
@@ -760,14 +761,53 @@ function finishGame(room, roomCode, result) {
     // 账号结算：胜负计数 + 任务进度；在线匹配额外结算金币
     const scores = result.result.perPlayerScores;
     room.players.forEach((p, i) => {
-      if (!p.playerId) return;
       const score = scores[i] || 0;
+      // 机器人金币结算：在线匹配里机器人也有金币，输光（低于入场线）则换人
+      if (p.botKey && room.isMatch) {
+        // Bot settlement uses same fixed gold logic
+        const finishOrder = result.result.finishOrder;
+        const team1 = result.result.team1;
+        const onTeam1 = team1 && team1.includes(i);
+        const t1Positions = team1.map(ti => finishOrder.indexOf(ti) + 1);
+        const t2Positions = [0,1,2,3].filter(ti => !team1.includes(ti)).map(ti => finishOrder.indexOf(ti) + 1);
+        const t1Best = Math.min(...t1Positions);
+        const t2Best = Math.min(...t2Positions);
+        let botGoldDelta = 0;
+        if (t1Best === 1 && t1Positions.includes(2)) botGoldDelta = onTeam1 ? 2000 : -2000;
+        else if (t2Best === 1 && t2Positions.includes(2)) botGoldDelta = onTeam2 ? 2000 : -2000;
+        else if (t1Best === 1 && t1Positions.includes(3)) botGoldDelta = onTeam1 ? 1000 : -1000;
+        else if (t2Best === 1 && t2Positions.includes(3)) botGoldDelta = onTeam2 ? 1000 : -1000;
+        try { botPool.settle(p.botKey, botGoldDelta); } catch (e) { /* ignore */ }
+        return;
+      }
+      if (!p.playerId) return;
       const won = score > 0;
       try { accounts.recordGame(p.playerId, won); } catch (e) { /* ignore */ }
       try { tasks.onGamePlayed(p.playerId, { won, isMatch: !!room.isMatch }); } catch (e) { /* ignore */ }
       let goldDelta = 0;
       if (room.isMatch) {
-        goldDelta = score * config.economy.matchGoldPerScore;
+        // Fixed gold rewards: rank 1+2 => +2000, rank 1+3 => +1000, rank 1+4 => +0
+        const finishOrder = result.result.finishOrder;
+        const team1 = result.result.team1;
+        const playerPos = finishOrder.indexOf(i) + 1; // 1-based position
+        const onTeam1 = team1 && team1.includes(i);
+        const onTeam2 = !onTeam1;
+        // Determine team ranks
+        const t1Positions = team1.map(ti => finishOrder.indexOf(ti) + 1);
+        const t2Positions = [0,1,2,3].filter(ti => !team1.includes(ti)).map(ti => finishOrder.indexOf(ti) + 1);
+        const t1Best = Math.min(...t1Positions);
+        const t2Best = Math.min(...t2Positions);
+        if (t1Best === 1 && t1Positions.includes(2)) {
+          goldDelta = onTeam1 ? 2000 : -2000;
+        } else if (t2Best === 1 && t2Positions.includes(2)) {
+          goldDelta = onTeam2 ? 2000 : -2000;
+        } else if (t1Best === 1 && t1Positions.includes(3)) {
+          goldDelta = onTeam1 ? 1000 : -1000;
+        } else if (t2Best === 1 && t2Positions.includes(3)) {
+          goldDelta = onTeam2 ? 1000 : -1000;
+        } else {
+          goldDelta = 0; // 1+4 tie
+        }
         if (goldDelta !== 0) accounts.addGold(p.playerId, goldDelta, 'match_settle', roomCode);
       }
       const fresh = accounts.getById(p.playerId);
@@ -776,6 +816,8 @@ function finishGame(room, roomCode, result) {
       }
     });
   }
+  // 释放本局占用的机器人（survivors 回到池子；输光的已在 settle 中换人）
+  if (room.botKeys && room.botKeys.length) { try { botPool.release(room.botKeys); } catch (e) { /* ignore */ } }
   clearRoomTimer(room);
   room.isPlaying = false;
   room.game = null;
@@ -825,8 +867,10 @@ async function performAutoTurn(roomCode, nonce) {
         io.to(roomCode).emit('card_called', { calledCard: res.calledCard, declarerIndex: game.declarerIndex });
         broadcastState(room);
         const np = room.players[res.currentTurn];
-        if (np && !np.isBot && !np.disconnected) io.to(np.socketId).emit('your_turn', { lastPlay: null, isNewRound: true });
-        scheduleBotTurn(roomCode);
+        setTimeout(() => {
+          if (np && !np.isBot && !np.disconnected) io.to(np.socketId).emit('your_turn', { lastPlay: null, isNewRound: true });
+          scheduleBotTurn(roomCode);
+        }, 1500);
       }
       return;
     }
@@ -900,31 +944,29 @@ function tryFormMatch(force) {
 
   const humans = matchQueue.splice(0, 4);
   const players = humans.map(e => ({ socketId: e.socketId, nickname: e.nickname, avatar: e.avatar, isBot: false, playerId: e.playerId }));
-  // 伪真人机器人补位：不重复昵称/头像
-  const usedNames = new Set(players.map(p => p.nickname));
-  const namesPool = BOT_NAMES.filter(n => !usedNames.has(n));
-  let bi = 0;
-  while (players.length < 4) {
-    const nm = (namesPool.splice(Math.floor(Math.random() * namesPool.length), 1)[0]) ||
-      (BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + (bi + 1));
+  // 伪真人机器人补位：从机器人池抽取（有金币、输光换人），排除与真人重名
+  const need = 4 - players.length;
+  const bots = need > 0 ? botPool.draw(need, players.map(p => p.nickname)) : [];
+  bots.forEach((b, i) => {
     players.push({
-      socketId: `bot_match_${Date.now()}_${bi}`,
-      nickname: nm,
-      avatar: BOT_AVATARS[Math.floor(Math.random() * BOT_AVATARS.length)],
+      socketId: `bot_match_${Date.now()}_${i}`,
+      nickname: b.nickname,
+      avatar: b.avatar,
       isBot: true,
-      botGold: randomBotGold(),
+      botKey: b.key,
+      botGold: b.gold,
     });
-    bi++;
-  }
+  });
 
   const room = roomManager.createMatchRoom(players);
   const roomCode = room.code;
   room.botDifficulty = 'medium';
   room.isMatch = true;
   room.hideBots = true; // 对客户端隐藏机器人身份，使其看起来像真人
+  room.botKeys = bots.map(b => b.key);
   room.players.forEach((rp, i) => {
     const src = players[i];
-    if (src) { rp.playerId = src.playerId; rp.botGold = src.botGold; }
+    if (src) { rp.playerId = src.playerId; rp.botGold = src.botGold; rp.botKey = src.botKey; }
   });
   humans.forEach(e => { if (e.socket) e.socket.join(roomCode); });
 

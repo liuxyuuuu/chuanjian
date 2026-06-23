@@ -201,7 +201,8 @@ class GameManager {
       const isTeam1 = team1.includes(pIdx);
       perPlayerScores[pIdx] = ((isTeam1 ? s1 : s2) / 2) * multiplier;
     });
-    return { finishOrder: [...this.finishOrder], team1, team2, team1Score: s1 * multiplier, team2Score: s2 * multiplier, bombCount: this.bombCount, multiplier, perPlayerScores, details: this.finishOrder.map((pIdx, pos) => ({ position: pos + 1, nickname: this.players[pIdx].nickname, isDeclarer: pIdx === this.declarerIndex, isTeammate: pIdx === this.teammateIndex, score: (perPlayerScores[pIdx] / multiplier), bombMultiplier: multiplier })) };
+    var remainingCards = this.players.map(function(p, i) { return { playerIndex: i, nickname: p.nickname, cards: p.hand.map(function(c) { return c.id; }) }; }).filter(function(r) { return r.cards.length > 0; });
+    return { finishOrder: [...this.finishOrder], team1, team2, team1Score: s1 * multiplier, team2Score: s2 * multiplier, bombCount: this.bombCount, multiplier, perPlayerScores, remainingCards: remainingCards, details: this.finishOrder.map((pIdx, pos) => ({ position: pos + 1, nickname: this.players[pIdx].nickname, isDeclarer: pIdx === this.declarerIndex, isTeammate: pIdx === this.teammateIndex, score: (perPlayerScores[pIdx] / multiplier), bombMultiplier: multiplier })) };
   }
 
   getPlayerHand(playerIndex) { return this.players[playerIndex].hand; }

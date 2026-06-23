@@ -60,7 +60,7 @@
       <div style="overflow:auto;margin-top:10px">
         <table>
           <thead><tr>
-            <th>ID</th><th>昵称</th><th>微信标识</th><th>金币</th><th>记牌器</th><th>胜/局</th><th>状态</th><th>操作</th>
+            <th>序号</th><th>昵称</th><th>玩家ID</th><th>金币</th><th>记牌器</th><th>胜/局</th><th>状态</th><th>操作</th>
           </tr></thead>
           <tbody id="players"></tbody>
         </table>
@@ -128,10 +128,11 @@ async function boot() {
 }
 async function refreshStats(){ const s = await api('/stats'); document.getElementById('stats').textContent = '玩家 '+s.totalPlayers+' · 在线 '+s.online; }
 async function loadPlayers(p){ if(p<1)p=1; page=p; const s=encodeURIComponent(document.getElementById('search').value||''); const r=await api('/players?page='+p+'&search='+s); const tb=document.getElementById('players'); tb.innerHTML='';
-  r.list.forEach(pl=>{ const tr=document.createElement('tr'); tr.innerHTML =
-    '<td>'+pl.id+'</td>'+
+  var base=(r.page-1)*(r.size||20);
+  r.list.forEach(function(pl,i){ const tr=document.createElement('tr'); tr.innerHTML =
+    '<td>'+(base+i+1)+'</td>'+
     '<td>'+(pl.avatar||'')+' '+escapeHtml(pl.nickname)+'</td>'+
-    '<td class="muted">'+wxId(pl)+'</td>'+
+    '<td class="muted">'+escapeHtml(pl.loginId||'-')+'</td>'+
     '<td><b>'+pl.gold+'</b></td>'+
     '<td>'+fmtDur(pl.counterSeconds)+'</td>'+
     '<td>'+pl.wins+'/'+pl.games+'</td>'+

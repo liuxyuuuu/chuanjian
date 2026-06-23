@@ -206,6 +206,11 @@ const UI = {
     const page = document.getElementById(pageId);
     if (page) page.classList.add('active');
     if (window.Account && Account.renderBar) Account.renderBar();
+    if (pageId === 'game-page') {
+      Sound.stopBgm();
+    } else if (pageId === 'lobby-page' || pageId === 'room-page') {
+      Sound.startBgm();
+    }
   },
 
   showOverlay(id) { document.getElementById(id).classList.remove('hidden'); },

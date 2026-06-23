@@ -21,10 +21,7 @@ function initSocket() {
 
   // 匹配队列人数更新
   socket.on('match_update', (data) => {
-    var info = document.getElementById('match-info');
-    if (info && data && data.queueSize !== undefined) {
-      info.textContent = '已找到 ' + Math.min(data.queueSize, 4) + '/4 人';
-    }
+    // Queue info hidden for realistic match feel
   });
 
   // 游戏开始
@@ -52,6 +49,9 @@ socket.on('game_start', (data) => {
     initCardCounter();
     updateCardCounter();
     window._isMatch = data.isMatch || false;
+    if (window._matchCountdown) { clearInterval(window._matchCountdown); window._matchCountdown = null; }
+    var _mo = document.getElementById("match-overlay");
+    if (_mo) _mo.classList.add("hidden");
     if (GameUI.lockChat) GameUI.lockChat();      // 聊天每局重置为锁定
     if (GameUI.resetCounterUI) GameUI.resetCounterUI();
     var _mo = document.getElementById('match-overlay');
@@ -231,7 +231,12 @@ socket.on('game_start', (data) => {
 
   // 游戏结束
   socket.on('game_over', (data) => {
-    GameUI.showResult(data.result);
+    if (data.result && data.result.remainingCards) {
+      GameUI.showRemainingCards(data.result.remainingCards);
+    }
+    setTimeout(() => {
+      GameUI.showResult(data.result);
+    }, 2000);
   });
 
   socket.on('player_disconnected', () => {
