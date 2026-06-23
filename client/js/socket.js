@@ -2,7 +2,7 @@
 let socket = null;
 
 function initSocket() {
-  socket = io();
+  socket = io({ auth: { token: window.Account ? Account.getToken() : '' } });
 
   socket.on('connect', () => {});
 
@@ -52,6 +52,8 @@ socket.on('game_start', (data) => {
     initCardCounter();
     updateCardCounter();
     window._isMatch = data.isMatch || false;
+    if (GameUI.lockChat) GameUI.lockChat();      // 聊天每局重置为锁定
+    if (GameUI.resetCounterUI) GameUI.resetCounterUI();
     var _mo = document.getElementById('match-overlay');
     if (_mo) _mo.classList.add('hidden');
     UI.showPage('game-page');
@@ -211,7 +213,20 @@ socket.on('game_start', (data) => {
   // 队友揭晓
   socket.on('teammate_revealed', (data) => {
     GameUI.showTeammateReveal(data);
+    if (GameUI.unlockChat) GameUI.unlockChat();
     Sound.speakEvent('reveal');
+  });
+
+  // 钱包更新（服务端结算/购买推送）
+  socket.on('wallet_update', (data) => { if (window.Account) Account.applyWallet(data); });
+
+  // 聊天广播
+  socket.on('chat_message', (data) => { if (GameUI.showChatBubble) GameUI.showChatBubble(data); });
+
+  // 记牌器时长用尽，服务端强制关闭
+  socket.on('counter_forced_off', () => {
+    if (GameUI.stopCounter) GameUI.stopCounter(true);
+    if (window.UI) UI.showToast('记牌器时长已用完');
   });
 
   // 游戏结束

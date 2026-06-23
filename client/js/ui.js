@@ -205,6 +205,7 @@ const UI = {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     const page = document.getElementById(pageId);
     if (page) page.classList.add('active');
+    if (window.Account && Account.renderBar) Account.renderBar();
   },
 
   showOverlay(id) { document.getElementById(id).classList.remove('hidden'); },

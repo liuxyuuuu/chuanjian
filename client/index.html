@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <title>穿剑 - 四人国风棋牌</title>
-  <link rel="stylesheet" href="css/style.css?v=1781944700000">
+  <link rel="stylesheet" href="css/style.css?v=1781944800000">
 </head>
 <body>
   <!-- ===== 大厅页面 ===== -->
@@ -42,7 +42,11 @@
         </button>
         <button class="mode-btn" onclick="startPVPGame()">
           <span class="mode-icon">👥</span>
-          <span class="mode-label">玩家对战</span>
+          <span class="mode-label">好友对战</span>
+        </button>
+        <button class="mode-btn" onclick="startOnlineMatch()">
+          <span class="mode-icon">🌐</span>
+          <span class="mode-label">在线匹配</span>
         </button>
       </div>
       <div class="lobby-actions hidden" id="pvp-actions">
@@ -134,7 +138,9 @@
       <div class="game-top-bar">
         <button class="btn small ghost" onclick="confirmLeave()">退出</button>
         <span id="game-status-text" class="game-status">游戏中</span>
-        <button id="settings-btn" class="btn small ghost" onclick="toggleSettings()" style="margin-left:auto;font-size:1.1rem">⚙️</button>
+        <button id="counter-toggle-btn" class="btn small ghost" onclick="GameUI.toggleCounter()" style="margin-left:auto">记牌器:关</button>
+        <button id="chat-btn" class="btn small ghost" onclick="GameUI.toggleChatPanel()" disabled title="队友曝光后解锁">💬</button>
+        <button id="settings-btn" class="btn small ghost" onclick="toggleSettings()" style="font-size:1.1rem">⚙️</button>
       </div>
       
       <!-- 游戏桌面 -->
@@ -243,6 +249,22 @@
   <div id="toast" class="toast hidden"></div>
   <div id="tomato-container" class="tomato-container"></div>
 
+  <!-- ===== 在线匹配弹窗 ===== -->
+  <div id="match-overlay" class="overlay hidden">
+    <div class="overlay-content" style="text-align:center">
+      <h3>在线匹配中…</h3>
+      <div style="font-size:2.2rem;color:var(--gold);margin:8px 0"><span id="match-timer">10</span>s</div>
+      <p id="match-info" class="acc-muted">已找到 1/4 人</p>
+      <p class="acc-muted" style="font-size:.75rem">超时将由电脑玩家补位</p>
+      <button class="btn outline" onclick="cancelMatch()">取消</button>
+    </div>
+  </div>
+
+  <!-- ===== 聊天面板（预设短语） ===== -->
+  <div id="chat-panel" class="hidden" style="position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:160;background:rgba(20,28,40,.96);border:1px solid rgba(201,168,76,.4);border-radius:12px;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px;width:min(92vw,360px)">
+    <!-- 短语按钮由 GameUI.buildChatPanel() 注入 -->
+  </div>
+
   <!-- ===== 确认弹窗 ===== -->
   <div id="confirm-overlay" class="overlay hidden">
     <div class="overlay-content">
@@ -308,9 +330,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-<script src="js/ui.js?v=1781944700000"></script>
-<script src="js/game.js?v=1781944700000"></script>
-<script src="js/socket.js?v=1781944700000"></script>
-<script src="js/app.js?v=1781944700000"></script>
+<script src="js/ui.js?v=1781944800000"></script>
+<script src="js/account.js?v=1781944800000"></script>
+<script src="js/game.js?v=1781944800000"></script>
+<script src="js/socket.js?v=1781944800000"></script>
+<script src="js/app.js?v=1781944800000"></script>
 </body>
 </html>

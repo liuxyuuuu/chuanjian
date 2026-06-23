@@ -601,10 +601,133 @@ const GameUI = {
     document.getElementById('result-overlay').classList.add('hidden');
   },
 
+  // ===== 记牌器启停（消耗账号记牌器时长） =====
+  showCounterAid(on) {
+    const tc = document.getElementById('top-counter');
+    const cr = document.getElementById('card-rememberer');
+    if (tc) tc.style.display = on ? '' : 'none';
+    if (cr) cr.style.display = on ? '' : 'none';
+  },
+  renderCounterBtn() {
+    const b = document.getElementById('counter-toggle-btn');
+    if (!b) return;
+    if (this._counterOn) {
+      const s = this._counterRemaining || 0;
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      b.textContent = '记牌器 ' + mm + ':' + ss;
+      b.style.color = '#7CFC9A';
+    } else {
+      b.textContent = '记牌器:关';
+      b.style.color = '';
+    }
+  },
+  resetCounterUI() {
+    if (this._counterTimer) { clearInterval(this._counterTimer); this._counterTimer = null; }
+    this._counterOn = false;
+    this.showCounterAid(false);
+    this.renderCounterBtn();
+  },
+  tickCounter() {
+    this._counterRemaining = Math.max(0, (this._counterRemaining || 0) - 1);
+    if (window.Account && Account.player) Account.player.counterSeconds = this._counterRemaining;
+    this.renderCounterBtn();
+    if (this._counterRemaining <= 0) this.stopCounter(true);
+  },
+  toggleCounter() {
+    if (!window.Account || !Account.isLoggedIn()) { UI.showToast('请先登录'); return; }
+    if (this._counterOn) { this.stopCounter(false); return; }
+    if ((Account.player.counterSeconds || 0) <= 0) { UI.showToast('记牌器时长不足，去商店或任务获取'); return; }
+    if (!window.socket) return;
+    socket.emit('counter_toggle', { on: true }, (res) => {
+      if (!res || !res.success) { UI.showToast((res && res.reason) || '开启失败'); return; }
+      this._counterOn = true;
+      this._counterRemaining = res.counterSeconds;
+      if (Account.player) { Account.player.counterSeconds = res.counterSeconds; Account.renderBar(); }
+      this.showCounterAid(true);
+      this.renderCounterBtn();
+      if (this._counterTimer) clearInterval(this._counterTimer);
+      this._counterTimer = setInterval(() => this.tickCounter(), 1000);
+    });
+  },
+  stopCounter() {
+    const wasOn = this._counterOn;
+    if (this._counterTimer) { clearInterval(this._counterTimer); this._counterTimer = null; }
+    this._counterOn = false;
+    this.showCounterAid(false);
+    this.renderCounterBtn();
+    if (wasOn && window.socket) {
+      socket.emit('counter_toggle', { on: false }, (res) => {
+        if (res && typeof res.counterSeconds === 'number' && window.Account && Account.player) {
+          Account.player.counterSeconds = res.counterSeconds; Account.renderBar();
+        }
+      });
+    }
+  },
+
+  // ===== 聊天（预设短语；队友曝光后解锁，每局重置） =====
+  lockChat() {
+    this._chatUnlocked = false;
+    const b = document.getElementById('chat-btn');
+    if (b) { b.disabled = true; b.title = '队友曝光后解锁'; }
+    this.hideChatPanel();
+  },
+  unlockChat() {
+    this._chatUnlocked = true;
+    const b = document.getElementById('chat-btn');
+    if (b) { b.disabled = false; b.title = '聊天'; }
+  },
+  buildChatPanel() {
+    const panel = document.getElementById('chat-panel');
+    if (!panel || panel._built) return;
+    const phrases = (window.Account && Account.PHRASES) || [];
+    panel.innerHTML = '';
+    phrases.forEach((t, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn small outline';
+      btn.textContent = t;
+      btn.onclick = () => this.sendChat(i);
+      panel.appendChild(btn);
+    });
+    panel._built = true;
+  },
+  toggleChatPanel() {
+    if (!this._chatUnlocked) { UI.showToast('队友曝光后才能聊天'); return; }
+    const panel = document.getElementById('chat-panel');
+    if (!panel) return;
+    this.buildChatPanel();
+    panel.classList.toggle('hidden');
+  },
+  hideChatPanel() {
+    const p = document.getElementById('chat-panel');
+    if (p) p.classList.add('hidden');
+  },
+  sendChat(phraseId) {
+    if (window.socket) socket.emit('chat_send', { phraseId });
+    this.hideChatPanel();
+  },
+  showChatBubble(data) {
+    if (!data) return;
+    const seat = this.getSeatName(data.playerIndex);
+    const anchor = document.getElementById('player-' + seat) || document.getElementById('played-' + seat);
+    if (!anchor) return;
+    const r = anchor.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'chat-bubble';
+    el.textContent = data.text || '';
+    el.style.cssText = 'position:fixed;z-index:600;left:' + (r.left + r.width / 2) + 'px;top:' + r.top +
+      'px;transform:translate(-50%,-110%);background:#fff;color:#222;padding:5px 12px;border-radius:14px;' +
+      'font-size:.85rem;font-weight:600;box-shadow:0 3px 10px rgba(0,0,0,.3);max-width:170px;pointer-events:none;';
+    document.body.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.remove(); }, 2400);
+  },
+
   reset() {
     this.stopCountdown();
     const circle = document.getElementById('timer-circle');
     if (circle) { circle.style.display = 'none'; circle.classList.remove('me'); }
+    this.resetCounterUI();
+    this.lockChat();
     this._timerTurn = -1;
     this.myIndex = -1;
     this.players = [];

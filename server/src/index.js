@@ -8,6 +8,44 @@ const { createTeamTracker, updateAllTrackers } = require('./game/teamDeduction')
 const RoomManager = require('./room/roomManager');
 const { PHASE, GameManager } = require('./game/gameManager');
 
+// ===== 账号 / 持久化 / 经济 =====
+const config = require('./config');
+require('./db');
+const accounts = require('./services/accounts');
+const sessions = require('./services/sessions');
+const adminsSvc = require('./services/admins');
+const presence = require('./services/presence');
+const tasks = require('./services/tasks');
+const apiRouter = require('./http/api');
+const adminRouter = require('./http/admin');
+
+adminsSvc.seedDefault();
+
+// 记牌器计时会话：socketId -> { playerId, startedAt }
+const counterSessions = new Map();
+
+// 结算并清除某 socket 的记牌器计时（按真实流逝秒数扣费）
+function settleCounter(socketId, reason) {
+  const s = counterSessions.get(socketId);
+  if (!s) return null;
+  counterSessions.delete(socketId);
+  const elapsed = Math.floor((Date.now() - s.startedAt) / 1000);
+  if (elapsed > 0) {
+    const r = accounts.addCounter(s.playerId, -elapsed, reason || 'counter_use', null);
+    return r.balance;
+  }
+  const p = accounts.getById(s.playerId);
+  return p ? p.counter_seconds : null;
+}
+
+function randomBotGold() { return 2000 + Math.floor(Math.random() * 80000); }
+
+// 预设聊天短语（服务端权威；客户端 UI 需保持同序）
+const CHAT_PHRASES = [
+  '快点出牌！', '好牌！', '哈哈，赢定了', '决战到天亮', '队友给力！',
+  '这把稳了', '失误失误', '再来一局', '你太强了', '认输吧',
+];
+
 // ===== Match System =====
 var onlineCount = 0;
 var matchQueue = [];
@@ -21,10 +59,24 @@ const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
+// Socket 鉴权：握手携带令牌则解析为账号（不强制，未登录仍可连接大厅）
+io.use((socket, next) => {
+  try {
+    const token = socket.handshake.auth && socket.handshake.auth.token;
+    const player = token ? sessions.validate(token) : null;
+    if (player) socket.data.player = player;
+  } catch (e) { /* ignore */ }
+  next();
+});
+
 const roomManager = new RoomManager();
 
 // 静态文件服务（客户端）
 app.use(express.static(path.join(__dirname, '../../client')));
+
+// REST 路由：玩家 API + 后台管理
+app.use('/api', apiRouter.buildRouter());
+app.use('/admin', adminRouter.buildRouter({ presence }));
 
 // 辅助函数：广播 room_update 给房间里每个玩家，附带各自的 myIndex
 function broadcastRoomUpdate(roomCode) {
@@ -46,6 +98,13 @@ io.on('connection', (socket) => {
   console.log(`[连接] ${socket.id} 已连接`);
 
   let currentNickname = '';
+
+  // 在线状态 + 登录任务
+  if (socket.data.player) {
+    presence.add(socket.data.player.id, socket.id);
+    try { tasks.onLogin(socket.data.player.id); } catch (e) { /* ignore */ }
+    currentNickname = socket.data.player.nickname || currentNickname;
+  }
 
   // 创建房间
   socket.on('create_room', (data, callback) => {
@@ -550,19 +609,65 @@ io.on('connection', (socket) => {
 
   // 在线匹配：加入匹配队列
   socket.on('quick_match', (data, callback) => {
-    const nickname = (data && data.nickname) || ('玩家' + socket.id.slice(0, 4));
-    const avatar = (data && data.avatar) || '';
+    const player = socket.data.player;
+    if (!player) { if (callback) callback({ success: false, reason: '请先登录' }); return; }
+    const fresh = accounts.getById(player.id);
+    if (fresh && fresh.gold < config.economy.matchMinGold) {
+      if (callback) callback({ success: false, reason: '金币不足，无法匹配（需 ' + config.economy.matchMinGold + '）' });
+      return;
+    }
+    const nickname = (fresh && fresh.nickname) || (data && data.nickname) || ('玩家' + socket.id.slice(0, 4));
+    const avatar = (fresh && fresh.avatar) || (data && data.avatar) || '';
     currentNickname = nickname;
     removeFromMatchQueue(socket.id);
-    matchQueue.push({ socketId: socket.id, socket, nickname, avatar });
+    matchQueue.push({ socketId: socket.id, socket, nickname, avatar, playerId: player.id });
     notifyMatchQueue();
     if (callback) callback({ success: true, queueSize: matchQueue.length });
     if (matchQueue.length >= 4) {
       tryFormMatch(false);
     } else {
       if (matchTimer) clearTimeout(matchTimer);
-      matchTimer = setTimeout(() => tryFormMatch(true), 12000);
+      matchTimer = setTimeout(() => tryFormMatch(true), 10000); // 10s 未满则机器人补位
     }
+  });
+
+  // 记牌器启停（服务端权威计时；任何模式开启即计时消耗）
+  socket.on('counter_toggle', (data, callback) => {
+    const player = socket.data.player;
+    if (!player) { if (callback) callback({ success: false, reason: '请先登录' }); return; }
+    const on = !!(data && data.on);
+    if (on) {
+      const fresh = accounts.getById(player.id);
+      if (!fresh || fresh.counter_seconds <= 0) {
+        if (callback) callback({ success: false, reason: '记牌器时长不足', counterSeconds: fresh ? fresh.counter_seconds : 0 });
+        return;
+      }
+      counterSessions.set(socket.id, { playerId: player.id, startedAt: Date.now() });
+      if (callback) callback({ success: true, on: true, counterSeconds: fresh.counter_seconds });
+    } else {
+      const bal = settleCounter(socket.id, 'counter_use');
+      const fresh = accounts.getById(player.id);
+      if (callback) callback({ success: true, on: false, counterSeconds: bal != null ? bal : (fresh ? fresh.counter_seconds : 0) });
+    }
+  });
+
+  // 聊天（预设短语）：队友身份曝光后才解锁，每局随对局结束自然失效
+  socket.on('chat_send', (data, callback) => {
+    const roomCode = roomManager.getRoomCode(socket.id);
+    if (!roomCode) { if (callback) callback({ success: false, reason: '不在房间中' }); return; }
+    const room = roomManager.getRoom(roomCode);
+    if (!room || !room.game) { if (callback) callback({ success: false, reason: '游戏未开始' }); return; }
+    if (!room.game.teammateRevealed) { if (callback) callback({ success: false, reason: '队友曝光后才能聊天' }); return; }
+    const p = roomManager.getPlayerFromRoom(roomCode, socket.id);
+    if (!p) { if (callback) callback({ success: false, reason: '玩家不存在' }); return; }
+    const now = Date.now();
+    if (socket.data._lastChat && now - socket.data._lastChat < 1500) { if (callback) callback({ success: false, reason: '发送太快' }); return; }
+    socket.data._lastChat = now;
+    const idx = parseInt(data && data.phraseId, 10);
+    const text = (idx >= 0 && idx < CHAT_PHRASES.length) ? CHAT_PHRASES[idx] : '';
+    if (!text) { if (callback) callback({ success: false, reason: '无效短语' }); return; }
+    io.to(roomCode).emit('chat_message', { playerIndex: p.index, phraseId: idx, text });
+    if (callback) callback({ success: true });
   });
 
   // 取消匹配
@@ -575,6 +680,8 @@ io.on('connection', (socket) => {
   // 断开连接
   socket.on('disconnect', () => {
     console.log(`[断开] ${socket.id} 已断开`);
+    settleCounter(socket.id, 'counter_use');
+    if (socket.data.player) presence.remove(socket.data.player.id, socket.id);
     removeFromMatchQueue(socket.id);
     const result = roomManager.leaveRoom(socket.id);
     if (result) {
@@ -644,9 +751,30 @@ function broadcastState(room) {
 
 // 统一的结算收尾：累计积分、清状态、广播
 function finishGame(room, roomCode, result) {
+  // 记牌器结算：本房所有真人停止计时
+  room.players.forEach(p => { if (p.socketId) settleCounter(p.socketId, 'counter_use'); });
+
   io.to(roomCode).emit('game_over', { result: result.result });
   if (result.result && result.result.perPlayerScores) {
     roomManager.updateScores(roomCode, result.result.perPlayerScores);
+    // 账号结算：胜负计数 + 任务进度；在线匹配额外结算金币
+    const scores = result.result.perPlayerScores;
+    room.players.forEach((p, i) => {
+      if (!p.playerId) return;
+      const score = scores[i] || 0;
+      const won = score > 0;
+      try { accounts.recordGame(p.playerId, won); } catch (e) { /* ignore */ }
+      try { tasks.onGamePlayed(p.playerId, { won, isMatch: !!room.isMatch }); } catch (e) { /* ignore */ }
+      let goldDelta = 0;
+      if (room.isMatch) {
+        goldDelta = score * config.economy.matchGoldPerScore;
+        if (goldDelta !== 0) accounts.addGold(p.playerId, goldDelta, 'match_settle', roomCode);
+      }
+      const fresh = accounts.getById(p.playerId);
+      if (fresh && p.socketId) {
+        io.to(p.socketId).emit('wallet_update', { gold: fresh.gold, counterSeconds: fresh.counter_seconds, goldDelta });
+      }
+    });
   }
   clearRoomTimer(room);
   room.isPlaying = false;
@@ -771,14 +899,20 @@ function tryFormMatch(force) {
   if (matchTimer) { clearTimeout(matchTimer); matchTimer = null; }
 
   const humans = matchQueue.splice(0, 4);
-  const players = humans.map(e => ({ socketId: e.socketId, nickname: e.nickname, avatar: e.avatar, isBot: false }));
+  const players = humans.map(e => ({ socketId: e.socketId, nickname: e.nickname, avatar: e.avatar, isBot: false, playerId: e.playerId }));
+  // 伪真人机器人补位：不重复昵称/头像
+  const usedNames = new Set(players.map(p => p.nickname));
+  const namesPool = BOT_NAMES.filter(n => !usedNames.has(n));
   let bi = 0;
   while (players.length < 4) {
+    const nm = (namesPool.splice(Math.floor(Math.random() * namesPool.length), 1)[0]) ||
+      (BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)] + (bi + 1));
     players.push({
       socketId: `bot_match_${Date.now()}_${bi}`,
-      nickname: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
+      nickname: nm,
       avatar: BOT_AVATARS[Math.floor(Math.random() * BOT_AVATARS.length)],
       isBot: true,
+      botGold: randomBotGold(),
     });
     bi++;
   }
@@ -786,11 +920,18 @@ function tryFormMatch(force) {
   const room = roomManager.createMatchRoom(players);
   const roomCode = room.code;
   room.botDifficulty = 'medium';
+  room.isMatch = true;
+  room.hideBots = true; // 对客户端隐藏机器人身份，使其看起来像真人
+  room.players.forEach((rp, i) => {
+    const src = players[i];
+    if (src) { rp.playerId = src.playerId; rp.botGold = src.botGold; }
+  });
   humans.forEach(e => { if (e.socket) e.socket.join(roomCode); });
 
   const game = new GameManager(roomCode);
   const startResult = game.start(room.players.map(p => ({
-    socketId: p.socketId, nickname: p.nickname, avatar: p.avatar || '', isBot: p.isBot || false,
+    socketId: p.socketId, nickname: p.nickname, avatar: p.avatar || '',
+    isBot: room.hideBots ? false : (p.isBot || false), // 匹配房对客户端隐藏机器人身份
   })));
   room.game = game;
   room.isPlaying = true;

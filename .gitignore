@@ -6,3 +6,8 @@ dist/
 Thumbs.db
 
 .vs/
+
+# 服务端运行时数据（SQLite 数据库、会话密钥、启动日志）
+server/data/
+server/boot.out
+server/boot.err

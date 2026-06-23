@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>穿剑 · 后台管理</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Microsoft YaHei", sans-serif; margin: 0; background: #f3f4f6; color: #1f2937; }
+  header { background: #1f2937; color: #fff; padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 16px; margin: 0; }
+  header .spacer { flex: 1; }
+  button { cursor: pointer; border: none; border-radius: 6px; padding: 6px 12px; background: #2563eb; color: #fff; font-size: 13px; }
+  button.gray { background: #6b7280; }
+  button.danger { background: #dc2626; }
+  button.sm { padding: 3px 8px; font-size: 12px; }
+  input, textarea { border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 8px; font-size: 13px; }
+  .wrap { max-width: 1100px; margin: 16px auto; padding: 0 12px; }
+  .card { background: #fff; border-radius: 8px; padding: 14px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #eee; white-space: nowrap; }
+  th { color: #6b7280; font-weight: 600; }
+  .online { color: #16a34a; font-weight: 600; }
+  .offline { color: #9ca3af; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .muted { color: #6b7280; font-size: 12px; }
+  #login { max-width: 320px; margin: 80px auto; }
+  #login input { width: 100%; margin-bottom: 10px; }
+  .hidden { display: none; }
+  .tag { font-size: 11px; background: #eef2ff; color: #4338ca; border-radius: 4px; padding: 1px 6px; }
+  .pill { background:#f3f4f6;border-radius:6px;padding:2px 8px;font-size:12px; }
+</style>
+</head>
+<body>
+<div id="login" class="card">
+  <h2>后台登录</h2>
+  <input id="u" placeholder="用户名" autocomplete="username">
+  <input id="p" type="password" placeholder="密码" autocomplete="current-password">
+  <button onclick="login()" style="width:100%">登录</button>
+  <div id="loginErr" class="muted" style="color:#dc2626;margin-top:8px;"></div>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <h1>穿剑 · 后台管理</h1>
+    <span id="stats" class="muted" style="color:#cbd5e1"></span>
+    <span class="spacer"></span>
+    <span id="who" style="font-size:13px"></span>
+    <button class="gray sm" onclick="logout()">退出</button>
+  </header>
+  <div class="wrap">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <strong>玩家管理</strong>
+        <div class="row">
+          <input id="search" placeholder="昵称/openid/unionid/ID" onkeydown="if(event.key==='Enter')loadPlayers(1)">
+          <button class="sm" onclick="loadPlayers(1)">搜索</button>
+        </div>
+      </div>
+      <div style="overflow:auto;margin-top:10px">
+        <table>
+          <thead><tr>
+            <th>ID</th><th>昵称</th><th>微信标识</th><th>金币</th><th>记牌器</th><th>胜/局</th><th>状态</th><th>操作</th>
+          </tr></thead>
+          <tbody id="players"></tbody>
+        </table>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="gray sm" onclick="loadPlayers(page-1)">上一页</button>
+        <span id="pageInfo" class="muted"></span>
+        <button class="gray sm" onclick="loadPlayers(page+1)">下一页</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <strong>发邮件</strong>
+      <div class="row" style="margin-top:10px">
+        <input id="mPlayer" placeholder="玩家ID（留空=群发）" style="width:160px">
+        <input id="mTitle" placeholder="标题" style="width:200px">
+        <input id="mGold" type="number" placeholder="附件金币" style="width:110px">
+        <input id="mCounter" type="number" placeholder="记牌器秒数" style="width:120px">
+      </div>
+      <textarea id="mBody" placeholder="正文" style="width:100%;margin-top:8px;height:60px"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button onclick="sendMail()">发送</button>
+        <span id="mailMsg" class="muted"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <strong>公告管理</strong>
+      <div class="row" style="margin-top:10px">
+        <input id="aTitle" placeholder="公告标题" style="width:220px">
+        <input id="aBody" placeholder="公告内容" style="flex:1;min-width:200px">
+        <button onclick="createAnn()">发布</button>
+      </div>
+      <table style="margin-top:10px"><tbody id="anns"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<script>
+let token = localStorage.getItem('admin_token') || '';
+let page = 1;
+function hdr() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }; }
+async function api(path, opts) {
+  const res = await fetch('/admin/api' + path, Object.assign({ headers: hdr() }, opts || {}));
+  if (res.status === 401) { logout(); throw new Error('未登录'); }
+  return res.json();
+}
+async function login() {
+  const r = await (await fetch('/admin/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username: u.value, password: p.value }) })).json();
+  if (!r.success) { loginErr.textContent = r.reason || '登录失败'; return; }
+  token = r.token; localStorage.setItem('admin_token', token); boot();
+}
+function logout() { token=''; localStorage.removeItem('admin_token'); document.getElementById('app').classList.add('hidden'); document.getElementById('login').classList.remove('hidden'); }
+function fmtDur(s){ s=s||0; const h=Math.floor(s/3600), m=Math.floor((s%3600)/60); return h+'h'+m+'m'; }
+function wxId(p){ return p.openid ? ('openid:'+p.openid.slice(0,10)) : (p.unionid?('union:'+p.unionid.slice(0,10)):(p.devKey?('dev:'+p.devKey.slice(0,8)):'-')); }
+async function boot() {
+  try {
+    const me = await api('/me');
+    if (!me.success) return logout();
+    document.getElementById('login').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    who.textContent = me.admin.username + '（' + me.admin.role + '）';
+    refreshStats(); loadPlayers(1); loadAnns();
+  } catch(e) { logout(); }
+}
+async function refreshStats(){ const s = await api('/stats'); document.getElementById('stats').textContent = '玩家 '+s.totalPlayers+' · 在线 '+s.online; }
+async function loadPlayers(p){ if(p<1)p=1; page=p; const s=encodeURIComponent(document.getElementById('search').value||''); const r=await api('/players?page='+p+'&search='+s); const tb=document.getElementById('players'); tb.innerHTML='';
+  r.list.forEach(pl=>{ const tr=document.createElement('tr'); tr.innerHTML =
+    '<td>'+pl.id+'</td>'+
+    '<td>'+(pl.avatar||'')+' '+escapeHtml(pl.nickname)+'</td>'+
+    '<td class="muted">'+wxId(pl)+'</td>'+
+    '<td><b>'+pl.gold+'</b></td>'+
+    '<td>'+fmtDur(pl.counterSeconds)+'</td>'+
+    '<td>'+pl.wins+'/'+pl.games+'</td>'+
+    '<td>'+(pl.online?'<span class=online>在线</span>':'<span class=offline>离线</span>')+(pl.banned?' <span class="tag" style="background:#fee2e2;color:#b91c1c">封禁</span>':'')+'</td>'+
+    '<td class="row">'+
+      '<button class="sm" onclick="adjGold('+pl.id+')">±金币</button>'+
+      '<button class="sm gray" onclick="adjCounter('+pl.id+')">±记牌器</button>'+
+      '<button class="sm '+(pl.banned?'':'danger')+'" onclick="ban('+pl.id+','+(pl.banned?0:1)+')">'+(pl.banned?'解封':'封禁')+'</button>'+
+    '</td>';
+    tb.appendChild(tr);
+  });
+  document.getElementById('pageInfo').textContent = '第 '+r.page+' 页 / 共 '+r.total+' 人';
+  refreshStats();
+}
+async function adjGold(id){ const v=prompt('金币增减（可负）：'); if(v===null)return; const r=await api('/players/'+id+'/gold',{method:'POST',body:JSON.stringify({delta:parseInt(v,10)||0,reason:'manual'})}); if(r.success)loadPlayers(page); }
+async function adjCounter(id){ const v=prompt('记牌器秒数增减（可负，3600=1小时）：'); if(v===null)return; const r=await api('/players/'+id+'/counter',{method:'POST',body:JSON.stringify({delta:parseInt(v,10)||0})}); if(r.success)loadPlayers(page); }
+async function ban(id,b){ await api('/players/'+id+'/ban',{method:'POST',body:JSON.stringify({banned:!!b})}); loadPlayers(page); }
+async function sendMail(){ const body={ title: mTitle.value, body: mBody.value, gold: parseInt(mGold.value,10)||0, counter: parseInt(mCounter.value,10)||0 }; if(mPlayer.value.trim()) body.playerId=parseInt(mPlayer.value,10); else body.broadcast=true; const r=await api('/mail/send',{method:'POST',body:JSON.stringify(body)}); document.getElementById('mailMsg').textContent = r.success?('已发送 '+r.count+' 封'):(r.reason||'失败'); }
+async function loadAnns(){ const r=await api('/announcements'); const tb=document.getElementById('anns'); tb.innerHTML=''; r.list.forEach(a=>{ const tr=document.createElement('tr'); tr.innerHTML='<td><b>'+escapeHtml(a.title)+'</b><div class=muted>'+escapeHtml(a.body||'')+'</div></td><td>'+(a.active?'<span class=online>展示中</span>':'<span class=offline>已下架</span>')+'</td><td class=row><button class="sm gray" onclick="toggleAnn('+a.id+','+(a.active?0:1)+')">'+(a.active?'下架':'上架')+'</button><button class="sm danger" onclick="delAnn('+a.id+')">删除</button></td>'; tb.appendChild(tr); }); }
+async function createAnn(){ if(!aTitle.value)return; await api('/announcements',{method:'POST',body:JSON.stringify({title:aTitle.value,body:aBody.value})}); aTitle.value='';aBody.value=''; loadAnns(); }
+async function toggleAnn(id,a){ await api('/announcements/'+id+'/active',{method:'POST',body:JSON.stringify({active:!!a})}); loadAnns(); }
+async function delAnn(id){ if(!confirm('确认删除？'))return; await api('/announcements/'+id,{method:'DELETE'}); loadAnns(); }
+function escapeHtml(s){ return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+if (token) boot();
+</script>
+</body>
+</html>

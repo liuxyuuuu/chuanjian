@@ -303,13 +303,14 @@ function backToLobby() {
 
 function startOnlineMatch() {
   lockLandscape();
-  var nick = getNickname();
-  saveNickname(nick);
+  if (!window.Account || !Account.isLoggedIn()) { if (window.Account) Account.showLogin(); UI.showToast("请先登录"); return; }
+  var nick = Account.player.nickname || getNickname();
   myNickname = nick;
-  var av = window._myAvatar || localStorage.getItem("chuanjian_avatar") || "";
+  var av = Account.player.avatar || window._myAvatar || "";
   if (!socket || !socket.connected) { UI.showToast("正在连接服务器..."); return; }
+  window._isMatch = true;
   document.getElementById("match-overlay").classList.remove("hidden");
-  document.getElementById("match-timer").textContent = "20";
+  document.getElementById("match-timer").textContent = "10";
   document.getElementById("match-info").textContent = "已找到 1/4 人";
   var timer = setInterval(function(){
     var t = parseInt(document.getElementById("match-timer").textContent);
@@ -317,6 +318,12 @@ function startOnlineMatch() {
     document.getElementById("match-timer").textContent = t - 1;
   }, 1000);
   socket.emit("quick_match", { nickname: nick, avatar: av }, function(res){
+    if (res && !res.success) {
+      clearInterval(timer);
+      document.getElementById("match-overlay").classList.add("hidden");
+      UI.showToast(res.reason || "匹配失败");
+      return;
+    }
     if (res && res.queueSize) {
       document.getElementById("match-info").textContent = "已找到 " + res.queueSize + "/4 人";
     }
