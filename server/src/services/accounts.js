@@ -1,93 +1,57 @@
 'use strict';
 const { db } = require('../db');
 const config = require('../config');
+const pwdUtil = require('../util/password');
 
 const now = () => Date.now();
 
 function tx(fn) {
   db.exec('BEGIN');
-  try {
-    const r = fn();
-    db.exec('COMMIT');
-    return r;
-  } catch (e) {
-    try { db.exec('ROLLBACK'); } catch (_) { /* ignore */ }
-    throw e;
-  }
+  try { const r = fn(); db.exec('COMMIT'); return r; }
+  catch (e) { try { db.exec('ROLLBACK'); } catch (_) {} throw e; }
 }
 
 const getById = (id) => db.prepare('SELECT * FROM players WHERE id = ?').get(id) || null;
-const getByOpenid = (openid) => db.prepare('SELECT * FROM players WHERE openid = ?').get(openid) || null;
-const getByUnionid = (unionid) => db.prepare('SELECT * FROM players WHERE unionid = ?').get(unionid) || null;
-const getByDevKey = (devKey) => db.prepare('SELECT * FROM players WHERE dev_key = ?').get(devKey) || null;
+const getByLoginId = (loginId) => db.prepare('SELECT * FROM players WHERE login_id = ?').get(loginId) || null;
 
 function publicView(p) {
   if (!p) return null;
-  return {
-    id: p.id,
-    nickname: p.nickname,
-    avatar: p.avatar,
-    gold: p.gold,
-    counterSeconds: p.counter_seconds,
-    wins: p.wins,
-    games: p.games,
-  };
+  return { id: p.id, nickname: p.nickname, avatar: p.avatar, gold: p.gold, counterSeconds: p.counter_seconds, wins: p.wins, games: p.games };
 }
 
-// 新手礼包（一次性）：在玩家刚插入时调用，幂等由调用处保证
 function grantNewPlayerBonus(playerId) {
   const ts = now();
-  db.prepare('UPDATE players SET gold = gold + ?, counter_seconds = counter_seconds + ? WHERE id = ?')
-    .run(config.economy.newPlayerGold, config.economy.newPlayerCounterSeconds, playerId);
+  db.prepare('UPDATE players SET gold = gold + ?, counter_seconds = counter_seconds + ? WHERE id = ?').run(config.economy.newPlayerGold, config.economy.newPlayerCounterSeconds, playerId);
   const p = getById(playerId);
-  db.prepare('INSERT INTO gold_ledger (player_id, delta, balance_after, reason, ref, created_at) VALUES (?,?,?,?,?,?)')
-    .run(playerId, config.economy.newPlayerGold, p.gold, 'newbie_bonus', null, ts);
-  db.prepare('INSERT INTO counter_ledger (player_id, delta, balance_after, reason, ref, created_at) VALUES (?,?,?,?,?,?)')
-    .run(playerId, config.economy.newPlayerCounterSeconds, p.counter_seconds, 'newbie_bonus', null, ts);
+  db.prepare('INSERT INTO gold_ledger (player_id, delta, balance_after, reason, ref, created_at) VALUES (?,?,?,?,?,?)').run(playerId, config.economy.newPlayerGold, p.gold, 'newbie_bonus', null, ts);
+  db.prepare('INSERT INTO counter_ledger (player_id, delta, balance_after, reason, ref, created_at) VALUES (?,?,?,?,?,?)').run(playerId, config.economy.newPlayerCounterSeconds, p.counter_seconds, 'newbie_bonus', null, ts);
 }
 
-// 微信 upsert：返回 { player, isNew }
-function upsertWechat({ openid, unionid, nickname, avatar }) {
+function register({ loginId, password, nickname }) {
+  if (!/^\d{8,11}$/.test(loginId || '')) return { ok: false, reason: 'ID 必须为 8-11 位数字' };
+  const pwd = String(password || '');
+  if (pwd.length < 6 || pwd.length > 20) return { ok: false, reason: '密码需 6-20 位' };
   return tx(() => {
-    let p = null;
-    if (unionid) p = getByUnionid(unionid);
-    if (!p && openid) p = getByOpenid(openid);
-    if (p) {
-      db.prepare('UPDATE players SET nickname = ?, avatar = ?, last_login = ?, openid = COALESCE(openid, ?), unionid = COALESCE(unionid, ?) WHERE id = ?')
-        .run(nickname || p.nickname, avatar || p.avatar, now(), openid || null, unionid || null, p.id);
-      return { player: getById(p.id), isNew: false };
-    }
+    if (getByLoginId(loginId)) return { ok: false, reason: '该 ID 已被注册' };
     const ts = now();
-    const info = db.prepare('INSERT INTO players (unionid, openid, nickname, avatar, created_at, last_login) VALUES (?,?,?,?,?,?)')
-      .run(unionid || null, openid || null, nickname || '微信玩家', avatar || '', ts, ts);
+    const info = db.prepare('INSERT INTO players (login_id, pwd_hash, nickname, avatar, created_at, last_login) VALUES (?,?,?,?,?,?)').run(loginId, pwdUtil.hash(pwd), nickname || ('玩家' + loginId.slice(-4)), '\u{1F4B0}', ts, ts);
     const id = Number(info.lastInsertRowid);
     grantNewPlayerBonus(id);
-    return { player: getById(id), isNew: true };
+    return { ok: true, player: getById(id) };
   });
 }
 
-// 开发用模拟账号：以 devKey 唯一标识
-function upsertDev({ devKey, nickname, avatar }) {
-  return tx(() => {
-    let p = getByDevKey(devKey);
-    if (p) {
-      db.prepare('UPDATE players SET nickname = ?, avatar = ?, last_login = ? WHERE id = ?')
-        .run(nickname || p.nickname, avatar || p.avatar, now(), p.id);
-      return { player: getById(p.id), isNew: false };
-    }
-    const ts = now();
-    const info = db.prepare('INSERT INTO players (dev_key, nickname, avatar, created_at, last_login) VALUES (?,?,?,?,?)')
-      .run(devKey, nickname || ('玩家' + devKey.slice(0, 4)), avatar || '🙂', ts, ts);
-    const id = Number(info.lastInsertRowid);
-    grantNewPlayerBonus(id);
-    return { player: getById(id), isNew: true };
-  });
+function loginWithPassword({ loginId, password }) {
+  const p = getByLoginId(loginId);
+  if (!p || !p.pwd_hash) return { ok: false, reason: 'ID 或密码错误' };
+  if (!pwdUtil.verify(String(password || ''), p.pwd_hash)) return { ok: false, reason: 'ID 或密码错误' };
+  if (p.banned) return { ok: false, reason: '该账号已被封禁' };
+  db.prepare('UPDATE players SET last_login = ? WHERE id = ?').run(now(), p.id);
+  return { ok: true, player: getById(p.id) };
 }
 
-// 原子金币变动；spend 为负数。clampZero=true 时余额不会低于 0。
-// 返回 { ok, balance, applied }
 function addGold(playerId, delta, reason, ref, opts = {}) {
-  const clampZero = opts.clampZero !== false; // 默认不允许负余额
+  const clampZero = opts.clampZero !== false;
   return tx(() => {
     const p = getById(playerId);
     if (!p) return { ok: false, balance: 0, applied: 0 };
@@ -98,13 +62,11 @@ function addGold(playerId, delta, reason, ref, opts = {}) {
       else return { ok: false, balance: p.gold, applied: 0 };
     }
     db.prepare('UPDATE players SET gold = ? WHERE id = ?').run(next, playerId);
-    db.prepare('INSERT INTO gold_ledger (player_id, delta, balance_after, reason, ref, created_at) VALUES (?,?,?,?,?,?)')
-      .run(playerId, applied, next, reason, ref || null, now());
+    db.prepare('INSERT INTO gold_ledger (player_id, delta, balance_after, reason, ref, created_at) VALUES (?,?,?,?,?,?)').run(playerId, applied, next, reason, ref || null, now());
     return { ok: true, balance: next, applied };
   });
 }
 
-// 原子记牌器时长变动（秒）。余额不会低于 0。
 function addCounter(playerId, delta, reason, ref) {
   return tx(() => {
     const p = getById(playerId);
@@ -113,8 +75,7 @@ function addCounter(playerId, delta, reason, ref) {
     let next = p.counter_seconds + delta;
     if (next < 0) { applied = -p.counter_seconds; next = 0; }
     db.prepare('UPDATE players SET counter_seconds = ? WHERE id = ?').run(next, playerId);
-    db.prepare('INSERT INTO counter_ledger (player_id, delta, balance_after, reason, ref, created_at) VALUES (?,?,?,?,?,?)')
-      .run(playerId, applied, next, reason, ref || null, now());
+    db.prepare('INSERT INTO counter_ledger (player_id, delta, balance_after, reason, ref, created_at) VALUES (?,?,?,?,?,?)').run(playerId, applied, next, reason, ref || null, now());
     return { ok: true, balance: next, applied };
   });
 }
@@ -126,8 +87,7 @@ function recordGame(playerId, won) {
 function setProfile(playerId, { nickname, avatar }) {
   const p = getById(playerId);
   if (!p) return null;
-  db.prepare('UPDATE players SET nickname = ?, avatar = ? WHERE id = ?')
-    .run(nickname || p.nickname, avatar || p.avatar, playerId);
+  db.prepare('UPDATE players SET nickname = ?, avatar = ? WHERE id = ?').run(nickname || p.nickname, avatar || p.avatar, playerId);
   return getById(playerId);
 }
 
@@ -135,10 +95,4 @@ function setBanned(playerId, banned) {
   db.prepare('UPDATE players SET banned = ? WHERE id = ?').run(banned ? 1 : 0, playerId);
 }
 
-module.exports = {
-  tx,
-  getById, getByOpenid, getByUnionid, getByDevKey,
-  publicView,
-  upsertWechat, upsertDev,
-  addGold, addCounter, recordGame, setProfile, setBanned,
-};
+module.exports = { tx, getById, getByLoginId, publicView, register, loginWithPassword, addGold, addCounter, recordGame, setProfile, setBanned };

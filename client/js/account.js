@@ -11,7 +11,9 @@
     _walletCbs: [],
 
     getToken() { return this.token || ''; },
-    isLoggedIn() { return !!this.player; },
+    isLoggedIn() { return !!(this.player && !this.player.isGuest); },
+    isGuest() { return !!(this.player && this.player.isGuest); },
+    hasSession() { return !!(this.player); },
     onWallet(cb) { this._walletCbs.push(cb); },
     _emitWallet() { this._walletCbs.forEach(cb => { try { cb(this.player); } catch (e) {} }); },
 
@@ -76,8 +78,8 @@
       if (r && r.success) {
         this.token = r.token; localStorage.setItem(LS_TOKEN, this.token);
         this.setPlayer(r.player); this.hideLogin(); this.reconnectSocket();
-        if (window.UI) UI.showToast('登录成功');
-      } else if (window.UI) UI.showToast((r && r.reason) || '登录失败');
+        this.showError(''); if (window.UI) UI.showToast('登录成功');
+      } else { this.showError((r && r.reason) || '登录失败'); }
     },
 
     wechatLogin() { location.href = '/api/auth/wechat'; },
@@ -158,9 +160,11 @@
         '<h3>' + String.fromCodePoint(0x7A7F, 0x5251) + '</h3>' +
         '<div id="login-tab" style="display:flex;gap:8px;justify-content:center;margin-bottom:10px">' +
           '<button class="acc-btn sm" id="tab-login" onclick="Account.switchLoginTab(' + String.fromCharCode(39) + 'login' + String.fromCharCode(39) + ')">' + String.fromCodePoint(0x767B, 0x5F55) + '</button>' +
-          '<button class="acc-btn sm gray" id="tab-reg" onclick="Account.switchLoginTab(' + String.fromCharCode(39) + 'reg' + String.fromCharCode(39) + ')">' + String.fromCodePoint(0x6CE8, 0x518C) + '</button>' +
-        '</div>' +
-        '<input id="login-id" inputmode="numeric" maxlength="11" placeholder="ID' + String.fromCodePoint(0xFF08) + '8-11' + String.fromCodePoint(0x4F4D) + String.fromCodePoint(0x6570) + String.fromCodePoint(0x5B57) + String.fromCodePoint(0xFF09) + '">' +
+          '<button class="acc-btn sm gray" id="tab-reg" onclick="Account.switchLoginTab(' + String.fromCharCode(39) + 'reg' + String.fromCharCode(39) + ')">' + String.fromCodePoint(0x6CE8, 0x5' + '</div>' +
+        '<button class="acc-btn sm" onclick="Account.guestLogin()" style="width:100%;margin-top:8px;background:#566">' + String.fromCodePoint(0x6E38) + String.fromCodePoint(0x5BA2) + String.fromCodePoint(0x767B) + String.fromCodePoint(0x5F55) + '</button>' +
+        
+        '<div id="login-error" class="hidden" style="color:#e74c3c;font-size:.8rem;margin-top:6px;text-align:center"></div>' +
+        '<div class="acc-muted"        '<input id="login-id" inputmode="numeric" maxlength="11" placeholder="ID' + String.fromCodePoint(0xFF08) + '8-11' + String.fromCodePoint(0x4F4D) + String.fromCodePoint(0x6570) + String.fromCodePoint(0x5B57) + String.fromCodePoint(0xFF09) + '">' +
         '<input id="login-pwd" type="password" maxlength="20" placeholder="' + String.fromCodePoint(0x5BC6) + String.fromCodePoint(0x7801) + String.fromCodePoint(0xFF08) + '6-20' + String.fromCodePoint(0x4F4D) + String.fromCodePoint(0xFF09) + '">' +
         '<input id="login-pwd2" type="password" maxlength="20" placeholder="' + String.fromCodePoint(0x786E) + String.fromCodePoint(0x8BA4) + String.fromCodePoint(0x5BC6) + String.fromCodePoint(0x7801) + '" style="display:none">' +
        '<button class="acc-btn" id="login-submit" style="width:100%" onclick="Account.submitAuth()">' + String.fromCodePoint(0x767B, 0x5F55) + '</button>' +
