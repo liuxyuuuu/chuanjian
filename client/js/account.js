@@ -1,4 +1,12 @@
-// 账号 / 钱包 / 登录 / 面板（公告·邮件·商店·任务）/ 记牌器开关 / 聊天
+guestLogin() {
+      const nick = (typeof getNickname === 'function') ? getNickname() : ('游客' + Math.floor(Math.random() * 10000));
+      this.player = { id: 'guest_' + Date.now(), nickname: nick, avatar: '\u{1F3AE}', gold: 0, counterSeconds: 0, isGuest: true };
+      this.token = '';
+      this.hideLogin();
+      this.renderBar();
+      if (window.UI) UI.showToast('游客模式 - 无法参与在线匹配');
+    },
+    // 账号 / 钱包 / 登录 / 面板（公告·邮件·商店·任务）/ 记牌器开关 / 聊天
 // 自注入 UI，尽量少改 index.html
 (function () {
   const LS_TOKEN = 'chuanjian_token';
@@ -78,13 +86,55 @@
       if (r && r.success) {
         this.token = r.token; localStorage.setItem(LS_TOKEN, this.token);
         this.setPlayer(r.player); this.hideLogin(); this.reconnectSocket();
-        this.showError(''); if (window.UI) UI.showToast('登录成功');
+        this.showError(''); this.showError(''); if (window.UI) UI.showToast('登录成功');
       } else { this.showError((r && r.reason) || '登录失败'); }
     },
 
     wechatLogin() { location.href = '/api/auth/wechat'; },
 
-    async logout() {
+    async showError(msg) {
+      const el = document.getElementById('login-error');
+      if (el) { el.textContent = msg || ''; el.classList.toggle('hidden', !msg); }
+      if (msg && window.UI) UI.showToast(msg);
+    },
+    submitAuth() {
+      const id = (document.getElementById('login-id') || {}).value || '';
+      const pwd = (document.getElementById('login-pwd') || {}).value || '';
+      if (!id || !pwd) { this.showError('请输入 ID 和密码'); return; }
+      if (this._loginTab === 'reg') {
+        const pwd2 = document.getElementById("login-pwd2");
+        if (!pwd2 || pwd !== pwd2.value) { this.showError('两次密码不一致'); return; }
+        this.register(id, pwd);
+      } else {
+        this.login(id, pwd);
+      }
+    },
+    async register(loginId, password) {
+      if (!/^\d{8,11}$/.test(loginId || '')) { this.showError('ID 须为 8-11 位数字'); return; }
+      if (!password || password.length < 6) { this.showError('密码至少 6 位'); return; }
+      const r = await this.api('/auth/register', { method: 'POST', body: JSON.stringify({ loginId, password }) });
+      if (r && r.success) {
+        this.token = r.token; localStorage.setItem(LS_TOKEN, this.token);
+        this.setPlayer(r.player); this.hideLogin(); this.reconnectSocket();
+        this.showError('');
+        if (window.UI) UI.showToast('注册成功，已登录');
+      } else {
+        this.showError((r && r.reason) || '注册失败');
+      }
+    },
+    async login(loginId, password) {
+      if (!loginId || !password) { this.showError('请输入 ID 和密码'); return; }
+      const r = await this.api('/auth/login', { method: 'POST', body: JSON.stringify({ loginId, password }) });
+      if (r && r.success) {
+        this.token = r.token; localStorage.setItem(LS_TOKEN, this.token);
+        this.setPlayer(r.player); this.hideLogin(); this.reconnectSocket();
+        this.showError('');
+        if (window.UI) UI.showToast('登录成功');
+      } else {
+        this.showError((r && r.reason) || '登录失败');
+      }
+    },
+    logout() {
       try { await this.api('/logout', { method: 'POST' }); } catch (e) {}
       this.token = ''; this.player = null; localStorage.removeItem(LS_TOKEN);
       this.renderBar(); this.showLogin();
