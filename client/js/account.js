@@ -65,11 +65,11 @@ guestLogin() {
       try { this.config = await this.api('/config'); } catch (e) { this.config = { registerMode: true }; }
       this.injectStyles();
       this.buildBar();
-      this.buildLoginOverlay();
+      this.buildLoginOverlay(); console.log('init: buildLoginOverlay done');
       if (this.token) {
         const me = await this.api('/me');
         if (me && me.success) { this.setPlayer(me.player); this.hideLogin(); this.reconnectSocket(); }
-        else { this.token = ''; localStorage.removeItem(LS_TOKEN); this.showLogin(); }
+        else { this.token = ''; localStorage.removeItem(LS_TOKEN); this.showLogin(); console.log('init: showLogin called'); }
       } else {
         this.showLogin();
       }
@@ -204,7 +204,7 @@ guestLogin() {
     },
     buildLoginOverlay() {
       if (document.getElementById('login-overlay')) return;
-      var o = document.createElement('div'); o.id = 'login-overlay'; o.className = 'acc-modal'; o.style.display = 'none';
+      console.log('buildLoginOverlay called'); var o = document.createElement('div'); o.id = 'login-overlay'; o.className = 'acc-modal'; o.style.display = 'none';
       var loginText = '登录';
       var regText = '注册';
       var guestText = '游客登录';
@@ -227,7 +227,7 @@ guestLogin() {
       var idEl = o.querySelector('#login-id');
       idEl.addEventListener('input', function() { idEl.value = idEl.value.replace(/\D/g, '').slice(0, 11); });
       this._loginTab = 'login';
-    },showLogin() { const o = document.getElementById('login-overlay'); if (o) o.style.display = 'flex'; },
+    },showLogin() { if (!document.getElementById('login-overlay')) this.buildLoginOverlay(); const o = document.getElementById('login-overlay'); if (o) { o.style.display = 'flex'; console.log('login overlay shown'); } else { console.error('login-overlay element not found'); } },
     hideLogin() { const o = document.getElementById('login-overlay'); if (o) o.style.display = 'none'; },
 
     modal(title, innerHtml) {
