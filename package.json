@@ -1,14 +1,17 @@
-{
-  "name": "chuanjian",
-  "version": "1.0.0",
-  "description": "穿剑 - 四人棋牌游戏",
-  "scripts": {
-    "start": "node server/src/index.js",
-    "dev": "node server/src/index.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "socket.io": "^4.7.2",
-    "uuid": "^9.0.0"
-  }
+﻿{
+    "name":  "chuanjian",
+    "version":  "1.0.0",
+    "description":  "绌垮墤 - 鍥涗汉妫嬬墝娓告垙",
+    "scripts":  {
+                    "start":  "node server/src/index.js",
+                    "dev":  "node server/src/index.js"
+                },
+    "dependencies":  {
+                         "express":  "^4.18.2",
+                         "socket.io":  "^4.7.2",
+                         "uuid":  "^9.0.0"
+                     },
+    "engines":  {
+                    "node":  "\u003e=22.5.0"
+                }
 }
