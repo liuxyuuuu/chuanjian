@@ -204,40 +204,30 @@ guestLogin() {
     },
     buildLoginOverlay() {
       if (document.getElementById('login-overlay')) return;
-      const o = document.createElement('div'); o.id = 'login-overlay'; o.className = 'acc-modal'; o.style.display = 'none';
+      var o = document.createElement('div'); o.id = 'login-overlay'; o.className = 'acc-modal'; o.style.display = 'none';
+      var loginText = '登录';
+      var regText = '注册';
+      var guestText = '游客登录';
       o.innerHTML =
         '<div class="box">' +
-        '<h3>' + String.fromCodePoint(0x7A7F, 0x5251) + '</h3>' +
+        '<h3>穿剑</h3>' +
         '<div id="login-tab" style="display:flex;gap:8px;justify-content:center;margin-bottom:10px">' +
-          '<button class="acc-btn sm" id="tab-login" onclick="Account.switchLoginTab(' + String.fromCharCode(39) + 'login' + String.fromCharCode(39) + ')">' + String.fromCodePoint(0x767B, 0x5F55) + '</button>' +
-          '<button class="acc-btn sm gray" id="tab-reg" onclick="Account.switchLoginTab(' + String.fromCharCode(39) + 'reg' + String.fromCharCode(39) + ')">' + String.fromCodePoint(0x6CE8, 0x5' + '</div>' +
-        '<button class="acc-btn sm" onclick="Account.guestLogin()" style="width:100%;margin-top:8px;background:#566">' + String.fromCodePoint(0x6E38) + String.fromCodePoint(0x5BA2) + String.fromCodePoint(0x767B) + String.fromCodePoint(0x5F55) + '</button>' +
-        
+          '<button class="acc-btn sm" id="tab-login" onclick="Account.switchLoginTab(' + String.fromCharCode(39) + 'login' + String.fromCharCode(39) + ')">' + loginText + '</button>' +
+          '<button class="acc-btn sm gray" id="tab-reg" onclick="Account.switchLoginTab(' + String.fromCharCode(39) + 'reg' + String.fromCharCode(39) + ')">' + regText + '</button>' +
+        '</div>' +
+        '<button class="acc-btn sm" onclick="Account.guestLogin()" style="width:100%;margin-top:4px;background:#566">' + guestText + '</button>' +
+        '<input id="login-id" inputmode="numeric" maxlength="11" placeholder="ID（8-11位数字）">' +
+        '<input id="login-pwd" type="password" maxlength="20" placeholder="密码（6-20位）">' +
+        '<input id="login-pwd2" type="password" maxlength="20" placeholder="确认密码" style="display:none">' +
+        '<button class="acc-btn" id="login-submit" style="width:100%" onclick="Account.submitAuth()">' + loginText + '</button>' +
         '<div id="login-error" class="hidden" style="color:#e74c3c;font-size:.8rem;margin-top:6px;text-align:center"></div>' +
-        '<div class="acc-muted"        '<input id="login-id" inputmode="numeric" maxlength="11" placeholder="ID' + String.fromCodePoint(0xFF08) + '8-11' + String.fromCodePoint(0x4F4D) + String.fromCodePoint(0x6570) + String.fromCodePoint(0x5B57) + String.fromCodePoint(0xFF09) + '">' +
-        '<input id="login-pwd" type="password" maxlength="20" placeholder="' + String.fromCodePoint(0x5BC6) + String.fromCodePoint(0x7801) + String.fromCodePoint(0xFF08) + '6-20' + String.fromCodePoint(0x4F4D) + String.fromCodePoint(0xFF09) + '">' +
-        '<input id="login-pwd2" type="password" maxlength="20" placeholder="' + String.fromCodePoint(0x786E) + String.fromCodePoint(0x8BA4) + String.fromCodePoint(0x5BC6) + String.fromCodePoint(0x7801) + '" style="display:none">' +
-       '<button class="acc-btn" id="login-submit" style="width:100%" onclick="Account.submitAuth()">' + String.fromCodePoint(0x767B, 0x5F55) + '</button>' +
-        '<div class="acc-muted" style="margin-top:8px">ID ' + String.fromCodePoint(0x4E3A) + ' 8-11 ' + String.fromCodePoint(0x4F4D) + String.fromCodePoint(0x7EAF) + String.fromCodePoint(0x6570) + String.fromCodePoint(0x5B57) + String.fromCodePoint(0xFF0C) + String.fromCodePoint(0x5BC6) + String.fromCodePoint(0x7801) + ' 6-20 ' + String.fromCodePoint(0x4F4D) + '</div>' +
+        '<div class="acc-muted" style="margin-top:8px">ID 为 8-11 位纯数字，密码 6-20 位</div>' +
         '</div>';
       document.body.appendChild(o);
-      const idEl = o.querySelector('#login-id');
-      idEl.addEventListener('input', () => { idEl.value = idEl.value.replace(/\D/g, '').slice(0, 11); });
+      var idEl = o.querySelector('#login-id');
+      idEl.addEventListener('input', function() { idEl.value = idEl.value.replace(/\D/g, '').slice(0, 11); });
       this._loginTab = 'login';
-    },
-    switchLoginTab(tab) {
-      this._loginTab = tab;
-      const isReg = tab === 'reg';
-      const submit = document.getElementById('login-submit');
-      const tl = document.getElementById('tab-login');
-      const tr = document.getElementById('tab-reg');
-      if (submit) submit.textContent = isReg ? '注册并登录' : '登录';
-      const pwd2 = document.getElementById("login-pwd2");
-      if (pwd2) pwd2.style.display = isReg ? "" : "none";
-      if (tl) tl.className = 'acc-btn sm' + (isReg ? ' gray' : '');
-      if (tr) tr.className = 'acc-btn sm' + (isReg ? '' : ' gray');
-    },
-    showLogin() { const o = document.getElementById('login-overlay'); if (o) o.style.display = 'flex'; },
+    },showLogin() { const o = document.getElementById('login-overlay'); if (o) o.style.display = 'flex'; },
     hideLogin() { const o = document.getElementById('login-overlay'); if (o) o.style.display = 'none'; },
 
     modal(title, innerHtml) {
