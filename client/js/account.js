@@ -184,7 +184,7 @@ guestLogin() {
       bar.style.display = (this.player && onLobby) ? 'flex' : 'none';
   const lobbyLogout = document.getElementById("lobby-logout-btn");
   const lobbyLogin = document.getElementById("lobby-login-btn");
-  if (lobbyLogin) lobbyLogin.style.display = this.player ? "none" : "inline-flex";
+  if (lobbyLogin) lobbyLogin.style.display = (this.player && !this.player.isGuest) ? "none" : "inline-flex";
   if (lobbyLogout) lobbyLogout.style.display = this.player ? "inline-flex" : "none";
       const g = document.getElementById('acc-gold'); if (g && this.player) g.textContent = '🪙 ' + this.player.gold;
       const dot = document.getElementById('acc-mail-dot'); if (dot && this.player) dot.style.display = this.player.unreadMail > 0 ? 'block' : 'none';
