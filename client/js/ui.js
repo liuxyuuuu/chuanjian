@@ -51,7 +51,25 @@ const Sound = {
   },
 
   _speak(text, opts) {
-    opts = opts || {};
+    opts = opts || {
+// BGM autoplay unlock - modern browsers require user gesture
+(function(){
+  var _unlocked = false;
+  function unlockBgm() {
+    if (_unlocked) return;
+    _unlocked = true;
+    if (Sound._ctx && Sound._ctx.state === 'suspended') Sound._ctx.resume();
+    if (!Sound._bgmPlaying) Sound.startBgm();
+    document.removeEventListener('click', unlockBgm);
+    document.removeEventListener('touchstart', unlockBgm);
+    document.removeEventListener('keydown', unlockBgm);
+  }
+  document.addEventListener('click', unlockBgm);
+  document.addEventListener('touchstart', unlockBgm);
+  document.addEventListener('keydown', unlockBgm);
+})();
+
+};
     if (!this._enabled) return;
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
@@ -164,6 +182,24 @@ const Sound = {
 };
 
 // 国风背景色盘
+
+// BGM autoplay unlock - modern browsers require user gesture
+(function(){
+  var _unlocked = false;
+  function unlockBgm() {
+    if (_unlocked) return;
+    _unlocked = true;
+    if (Sound._ctx && Sound._ctx.state === 'suspended') Sound._ctx.resume();
+    if (!Sound._bgmPlaying) Sound.startBgm();
+    document.removeEventListener('click', unlockBgm);
+    document.removeEventListener('touchstart', unlockBgm);
+    document.removeEventListener('keydown', unlockBgm);
+  }
+  document.addEventListener('click', unlockBgm);
+  document.addEventListener('touchstart', unlockBgm);
+  document.addEventListener('keydown', unlockBgm);
+})();
+
 const GUOFENG_BG = [
   'linear-gradient(135deg, #d4a373, #bc8f4f)',
   'linear-gradient(135deg, #8cb3a0, #6b9a85)',
